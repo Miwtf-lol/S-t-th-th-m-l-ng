@@ -1,4 +1,4 @@
---// VM.wtf PRO MAX (FULL)
+--// VM.wtf FINAL FULL
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -179,7 +179,25 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- TARGET (PLAYER ONLY)
+-- WALL CHECK
+local function isVisible(targetPart)
+    local origin = Camera.CFrame.Position
+    local direction = (targetPart.Position - origin)
+
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {LocalPlayer.Character}
+
+    local result = workspace:Raycast(origin, direction, params)
+
+    if result then
+        return result.Instance:IsDescendantOf(targetPart.Parent)
+    end
+
+    return true
+end
+
+-- TARGET
 local function getTarget()
     local closest = nil
     local shortest = math.huge
@@ -194,7 +212,7 @@ local function getTarget()
             end
 
             local head = v:FindFirstChild("Head")
-            if head then
+            if head and isVisible(head) then
                 local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
                 if onScreen then
                     local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(FOV.Position.X, FOV.Position.Y)).Magnitude
@@ -211,7 +229,7 @@ local function getTarget()
     return closest
 end
 
--- LOOP (SNAP AIM)
+-- LOOP
 RunService.RenderStepped:Connect(function()
     FOV.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     FOV.Radius = FOV_RADIUS
@@ -219,8 +237,7 @@ RunService.RenderStepped:Connect(function()
     if AimEnabled then
         local target = getTarget()
         if target then
-            local targetCF = CFrame.new(Camera.CFrame.Position, target.Position)
-            Camera.CFrame = targetCF
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
         end
     end
 end)
