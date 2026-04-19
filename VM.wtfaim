@@ -1,0 +1,130 @@
+--// VM.wtf PRO MAX (Aim NPC + Player + Team Check + Smooth + UI)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- SETTINGS
+local AimEnabled = false
+local AimPlayers = true
+local TeamCheck = true
+local Smoothness = 0.15
+local FOV_RADIUS = 150
+
+-- GUI
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0,220,0,170)
+Main.Position = UDim2.new(0,50,0,200)
+Main.BackgroundColor3 = Color3.fromRGB(20,20,20)
+Main.BackgroundTransparency = 0.2
+Main.Active = true
+Main.Draggable = true
+
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0,12)
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(255,100,100)
+
+-- Title
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1,0,0,30)
+Title.Text = "VM.wtf"
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.fromRGB(255,100,100)
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
+
+-- BUTTON TEMPLATE
+local function createBtn(text, posY)
+    local btn = Instance.new("TextButton", Main)
+    btn.Size = UDim2.new(0.8,0,0,30)
+    btn.Position = UDim2.new(0.1,0,posY,0)
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    btn.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", btn)
+    return btn
+end
+
+-- Buttons
+local AimBtn = createBtn("Aim: OFF", 0.25)
+local PlayerBtn = createBtn("Player: ON", 0.5)
+local TeamBtn = createBtn("Team: ON", 0.7)
+
+AimBtn.MouseButton1Click:Connect(function()
+    AimEnabled = not AimEnabled
+    AimBtn.Text = AimEnabled and "Aim: ON" or "Aim: OFF"
+end)
+
+PlayerBtn.MouseButton1Click:Connect(function()
+    AimPlayers = not AimPlayers
+    PlayerBtn.Text = AimPlayers and "Player: ON" or "Player: OFF"
+end)
+
+TeamBtn.MouseButton1Click:Connect(function()
+    TeamCheck = not TeamCheck
+    TeamBtn.Text = TeamCheck and "Team: ON" or "Team: OFF"
+end)
+
+-- FOV
+local FOV = Drawing.new("Circle")
+FOV.Radius = FOV_RADIUS
+FOV.Thickness = 2
+FOV.Color = Color3.fromRGB(255,100,100)
+FOV.Filled = false
+FOV.Visible = true
+
+-- TARGET FIND
+local function getTarget()
+    local closest = nil
+    local shortest = math.huge
+
+    for _, v in pairs(workspace:GetChildren()) do
+    local player = Players:GetPlayerFromCharacter(v)
+
+    if player and player ~= LocalPlayer then
+            
+            local player = Players:GetPlayerFromCharacter(v)
+
+            -- check player toggle
+            if player then
+                if not AimPlayers then continue end
+                if TeamCheck and player.Team == LocalPlayer.Team then continue end
+            end
+
+            local head = v:FindFirstChild("Head")
+            if head then
+                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(FOV.Position.X, FOV.Position.Y)).Magnitude
+                    
+                    -- ưu tiên gần tâm + gần
+                    if dist < FOV_RADIUS and dist < shortest then
+                        shortest = dist
+                        closest = head
+                    end
+                end
+            end
+        end
+    end
+
+    return closest
+end
+
+-- SMOOTH AIM
+RunService.RenderStepped:Connect(function()
+    FOV.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+
+    if AimEnabled then
+        local target = getTarget()
+        if target then
+            local current = Camera.CFrame
+            local targetCF = CFrame.new(current.Position, target.Position)
+            
+            Camera.CFrame = current:Lerp(targetCF, Smoothness)
+        end
+    end
+end)
