@@ -1,0 +1,187 @@
+--// VM.wtf Fly GUI VIP (Clean / Test)
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local LP = Players.LocalPlayer
+local Char = LP.Character or LP.CharacterAdded:Wait()
+local HRP = Char:WaitForChild("HumanoidRootPart")
+local Camera = workspace.CurrentCamera
+
+-- SETTINGS
+local flying = false
+local speed = 60
+local boost = false
+
+-- BODY MOVERS
+local BV = Instance.new("BodyVelocity")
+BV.MaxForce = Vector3.new(9e9,9e9,9e9)
+local BG = Instance.new("BodyGyro")
+BG.MaxTorque = Vector3.new(9e9,9e9,9e9)
+BG.P = 2000
+
+-- GUI
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "VMwtf_FlyVIP"
+
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0,240,0,200)
+main.Position = UDim2.new(0,60,0,220)
+main.BackgroundColor3 = Color3.fromRGB(20,20,20)
+main.Active = true
+main.Draggable = true
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
+Instance.new("UIStroke", main).Color = Color3.fromRGB(255,100,100)
+
+-- TITLE
+local title = Instance.new("TextLabel", main)
+title.Size = UDim2.new(1,0,0,30)
+title.Text = "VM.wtf"
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255,100,100)
+title.Font = Enum.Font.GothamBold
+title.TextScaled = true
+
+-- LOGO (đổi ID của bạn)
+local logo = Instance.new("ImageLabel", main)
+logo.Size = UDim2.new(0,24,0,24)
+logo.Position = UDim2.new(0,6,0,3)
+logo.BackgroundTransparency = 1
+logo.Image = "rbxassetid://135283977825181" -- đổi ID
+
+-- MINI TOGGLE
+local toggle = Instance.new("TextButton", main)
+toggle.Size = UDim2.new(0,24,0,24)
+toggle.Position = UDim2.new(1,-28,0,3)
+toggle.Text = "-"
+toggle.BackgroundColor3 = Color3.fromRGB(40,40,40)
+toggle.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", toggle)
+
+local mini = Instance.new("TextButton", gui)
+mini.Size = UDim2.new(0,110,0,36)
+mini.Position = main.Position
+mini.Text = "VM.wtf"
+mini.BackgroundColor3 = Color3.fromRGB(20,20,20)
+mini.TextColor3 = Color3.fromRGB(255,100,100)
+mini.Visible = false
+Instance.new("UICorner", mini)
+
+toggle.MouseButton1Click:Connect(function()
+    main.Visible = false
+    mini.Visible = true
+end)
+mini.MouseButton1Click:Connect(function()
+    main.Visible = true
+    mini.Visible = false
+end)
+
+-- DRAG MINI
+mini.Active = true
+local drag, dragStart, startPos
+mini.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        drag = true
+        dragStart = i.Position
+        startPos = mini.Position
+        i.Changed:Connect(function()
+            if i.UserInputState == Enum.UserInputState.End then drag = false end
+        end)
+    end
+end)
+UIS.InputChanged:Connect(function(i)
+    if drag then
+        local d = i.Position - dragStart
+        mini.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+    end
+end)
+
+-- BUTTONS
+local function btn(txt, y)
+    local b = Instance.new("TextButton", main)
+    b.Size = UDim2.new(0.8,0,0,30)
+    b.Position = UDim2.new(0.1,0,y,0)
+    b.Text = txt
+    b.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    b.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", b)
+    return b
+end
+
+local flyBtn = btn("Fly: OFF", 0.25)
+local boostBtn = btn("Boost: OFF", 0.45)
+
+flyBtn.MouseButton1Click:Connect(function()
+    flying = not flying
+    flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
+    if flying then
+        BV.Parent = HRP
+        BG.Parent = HRP
+    else
+        BV.Parent = nil
+        BG.Parent = nil
+    end
+end)
+
+boostBtn.MouseButton1Click:Connect(function()
+    boost = not boost
+    boostBtn.Text = boost and "Boost: ON" or "Boost: OFF"
+end)
+
+-- SLIDER SPEED
+local bar = Instance.new("Frame", main)
+bar.Size = UDim2.new(0.8,0,0,6)
+bar.Position = UDim2.new(0.1,0,0.75,0)
+bar.BackgroundColor3 = Color3.fromRGB(60,60,60)
+Instance.new("UICorner", bar)
+
+local fill = Instance.new("Frame", bar)
+fill.Size = UDim2.new(0.5,0,1,0)
+fill.BackgroundColor3 = Color3.fromRGB(255,100,100)
+Instance.new("UICorner", fill)
+
+local knob = Instance.new("Frame", bar)
+knob.Size = UDim2.new(0,10,0,10)
+knob.Position = UDim2.new(0.5,-5,0.5,-5)
+knob.BackgroundColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", knob)
+
+local speedText = Instance.new("TextLabel", main)
+speedText.Size = UDim2.new(1,0,0,20)
+speedText.Position = UDim2.new(0,0,0.8,0)
+speedText.BackgroundTransparency = 1
+speedText.TextColor3 = Color3.new(1,1,1)
+speedText.Text = "Speed: "..speed
+
+local dragging = false
+knob.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+    end
+end)
+UIS.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+UIS.InputChanged:Connect(function(i)
+    if dragging then
+        local r = (i.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X
+        r = math.clamp(r,0,1)
+        fill.Size = UDim2.new(r,0,1,0)
+        knob.Position = UDim2.new(r,-5,0.5,-5)
+        speed = math.floor(20 + (180*r))
+        speedText.Text = "Speed: "..speed
+    end
+end)
+
+-- FLY LOOP
+RunService.RenderStepped:Connect(function()
+    if flying then
+        local dir = Camera.CFrame.LookVector
+        local finalSpeed = boost and speed*2 or speed
+        BV.Velocity = dir * finalSpeed
+        BG.CFrame = Camera.CFrame
+    end
+end)
