@@ -1,4 +1,4 @@
---// VM.wtf FINAL FULL (SPEED BUTTON)
+--// VM.wtf FINAL MOBILE FULL (EYE MINI UI)
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -58,20 +58,26 @@ logo.Position = UDim2.new(0,6,0,3)
 logo.BackgroundTransparency = 1
 logo.Image = "rbxassetid://1234567890"
 
--- MINI UI
+-- MINI UI (EYE ICON)
+local mini = Instance.new("ImageButton", gui)
+mini.Size = UDim2.new(0,50,0,50)
+mini.Position = main.Position
+mini.BackgroundTransparency = 1
+mini.Image = "rbxassetid://6031075938" -- eye icon
+
+local stroke = Instance.new("UIStroke", mini)
+stroke.Color = Color3.fromRGB(255,255,255)
+stroke.Thickness = 2
+stroke.Transparency = 0.2
+
+Instance.new("UICorner", mini)
+
+-- TOGGLE
 local toggle = Instance.new("TextButton", main)
 toggle.Size = UDim2.new(0,24,0,24)
 toggle.Position = UDim2.new(1,-28,0,3)
 toggle.Text = "-"
 toggle.BackgroundColor3 = Color3.fromRGB(40,40,40)
-
-local mini = Instance.new("TextButton", gui)
-mini.Size = UDim2.new(0,110,0,36)
-mini.Position = main.Position
-mini.Text = "VM.wtf"
-mini.BackgroundColor3 = Color3.fromRGB(20,20,20)
-mini.TextColor3 = Color3.fromRGB(255,100,100)
-mini.Visible = false
 
 toggle.MouseButton1Click:Connect(function()
     main.Visible = false
@@ -83,32 +89,47 @@ mini.MouseButton1Click:Connect(function()
     mini.Visible = false
 end)
 
--- DRAG MINI
+-- DRAG MINI (PC + MOBILE)
 mini.Active = true
-local drag, dragStart, startPos
 
-mini.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then
-        drag = true
-        dragStart = i.Position
+local dragging = false
+local dragInput, dragStart, startPos
+
+mini.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
         startPos = mini.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
 end)
 
-UIS.InputChanged:Connect(function(i)
-    if drag then
-        local d = i.Position - dragStart
-        mini.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+mini.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement 
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
     end
 end)
 
-UIS.InputEnded:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then
-        drag = false
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        mini.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
     end
 end)
 
--- BUTTON
+-- BUTTON CREATOR
 local function btn(txt, y)
     local b = Instance.new("TextButton", main)
     b.Size = UDim2.new(0.8,0,0,30)
@@ -142,7 +163,7 @@ boostBtn.MouseButton1Click:Connect(function()
     boostBtn.Text = boost and "Boost: ON" or "Boost: OFF"
 end)
 
--- SPEED TEXT
+-- SPEED
 local speedText = Instance.new("TextLabel", main)
 speedText.Size = UDim2.new(1,0,0,20)
 speedText.Position = UDim2.new(0,0,0.65,0)
@@ -150,7 +171,6 @@ speedText.BackgroundTransparency = 1
 speedText.TextColor3 = Color3.new(1,1,1)
 speedText.Text = "Speed: "..speed
 
--- SPEED BUTTONS
 local function speedBtn(txt, posX, value)
     local b = Instance.new("TextButton", main)
     b.Size = UDim2.new(0,45,0,25)
@@ -171,7 +191,7 @@ speedBtn("-1", 0.3, -1)
 speedBtn("+1", 0.55, 1)
 speedBtn("+10", 0.75, 10)
 
--- UP / DOWN
+-- PC MOVE Y
 UIS.InputBegan:Connect(function(i)
     if i.KeyCode == Enum.KeyCode.Space then moveY = 1 end
     if i.KeyCode == Enum.KeyCode.LeftControl then moveY = -1 end
@@ -191,13 +211,13 @@ RunService.RenderStepped:Connect(function()
         local humanoid = Char:FindFirstChild("Humanoid")
         if not humanoid then return end
 
-        local moveDir = humanoid.MoveDirection
         local camCF = Camera.CFrame
+        local moveDir = humanoid.MoveDirection
 
-        local forward = camCF.LookVector
-        local right = camCF.RightVector
+        local forward = Vector3.new(camCF.LookVector.X,0,camCF.LookVector.Z).Unit
+        local right = Vector3.new(camCF.RightVector.X,0,camCF.RightVector.Z).Unit
 
-        local move = (forward * -moveDir.Z + right * moveDir.X)
+        local move = (forward * moveDir.Z + right * moveDir.X)
 
         local finalSpeed = boost and speed*2 or speed
         local vertical = moveY * finalSpeed
@@ -208,7 +228,7 @@ RunService.RenderStepped:Connect(function()
             targetVelocity = (move * finalSpeed) + Vector3.new(0, vertical, 0)
         end
 
-        currentVelocity = currentVelocity:Lerp(targetVelocity, 0.2)
+        currentVelocity = currentVelocity:Lerp(targetVelocity, 0.25)
 
         BV.Velocity = currentVelocity
         BG.CFrame = camCF
