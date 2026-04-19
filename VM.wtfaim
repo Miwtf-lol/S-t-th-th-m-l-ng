@@ -1,4 +1,4 @@
---// VM.wtf FINAL FULL
+--// VM.wtf FINAL FULL (Target Name)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -11,12 +11,13 @@ local Camera = workspace.CurrentCamera
 local AimEnabled = false
 local TeamCheck = true
 local FOV_RADIUS = 150
+local TargetName = ""
 
 -- GUI
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 
 local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0,220,0,180)
+Main.Size = UDim2.new(0,220,0,210)
 Main.Position = UDim2.new(0,50,0,200)
 Main.BackgroundColor3 = Color3.fromRGB(20,20,20)
 Main.BackgroundTransparency = 0.2
@@ -63,7 +64,6 @@ MiniBtn.InputBegan:Connect(function(input)
         draggingMini = true
         dragStart = input.Position
         startPos = MiniBtn.Position
-
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 draggingMini = false
@@ -81,7 +81,6 @@ end)
 UIS.InputChanged:Connect(function(input)
     if input == dragInput and draggingMini then
         local delta = input.Position - dragStart
-
         MiniBtn.Position = UDim2.new(
             startPos.X.Scale,
             startPos.X.Offset + delta.X,
@@ -102,7 +101,7 @@ MiniBtn.MouseButton1Click:Connect(function()
     MiniBtn.Visible = false
 end)
 
--- BUTTON TEMPLATE
+-- Button template
 local function createBtn(text, posY)
     local btn = Instance.new("TextButton", Main)
     btn.Size = UDim2.new(0.8,0,0,30)
@@ -116,7 +115,7 @@ end
 
 -- Buttons
 local AimBtn = createBtn("Aim: OFF", 0.25)
-local TeamBtn = createBtn("Team: ON", 0.5)
+local TeamBtn = createBtn("Team: ON", 0.45)
 
 AimBtn.MouseButton1Click:Connect(function()
     AimEnabled = not AimEnabled
@@ -126,6 +125,19 @@ end)
 TeamBtn.MouseButton1Click:Connect(function()
     TeamCheck = not TeamCheck
     TeamBtn.Text = TeamCheck and "Team: ON" or "Team: OFF"
+end)
+
+-- Name input
+local NameBox = Instance.new("TextBox", Main)
+NameBox.Size = UDim2.new(0.8,0,0,30)
+NameBox.Position = UDim2.new(0.1,0,0.65,0)
+NameBox.PlaceholderText = "Target Name..."
+NameBox.BackgroundColor3 = Color3.fromRGB(40,40,40)
+NameBox.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", NameBox)
+
+NameBox.FocusLost:Connect(function()
+    TargetName = NameBox.Text
 end)
 
 -- FOV
@@ -168,7 +180,7 @@ UIS.InputEnded:Connect(function(input)
 end)
 
 UIS.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+    if dragging then
         local relative = (input.Position.X - SliderBg.AbsolutePosition.X) / SliderBg.AbsoluteSize.X
         relative = math.clamp(relative, 0, 1)
 
@@ -179,7 +191,7 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- WALL CHECK
+-- Wall check
 local function isVisible(targetPart)
     local origin = Camera.CFrame.Position
     local direction = (targetPart.Position - origin)
@@ -193,11 +205,10 @@ local function isVisible(targetPart)
     if result then
         return result.Instance:IsDescendantOf(targetPart.Parent)
     end
-
     return true
 end
 
--- TARGET
+-- Target
 local function getTarget()
     local closest = nil
     local shortest = math.huge
@@ -207,6 +218,10 @@ local function getTarget()
 
         if player and player ~= LocalPlayer then
             
+            if TargetName ~= "" and player.Name:lower() ~= TargetName:lower() then
+                continue
+            end
+
             if TeamCheck and player.Team == LocalPlayer.Team then
                 continue
             end
@@ -216,7 +231,6 @@ local function getTarget()
                 local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
                 if onScreen then
                     local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(FOV.Position.X, FOV.Position.Y)).Magnitude
-
                     if dist < FOV_RADIUS and dist < shortest then
                         shortest = dist
                         closest = head
