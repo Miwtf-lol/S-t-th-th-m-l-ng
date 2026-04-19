@@ -1,0 +1,93 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+local event = ReplicatedStorage:WaitForChild("AdminEvent")
+
+-- ================= UI =================
+local gui = Instance.new("ScreenGui")
+gui.Parent = game.CoreGui
+gui.Enabled = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 180, 0, 200)
+frame.Position = UDim2.new(0, 20, 0.3, 0)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+
+-- 🔥 TITLE (mi.wtf)
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundColor3 = Color3.fromRGB(15,15,15)
+title.Text = "mi.wtf ADMIN PANEL"
+title.TextColor3 = Color3.fromRGB(0, 170, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+
+-- ================= TOGGLE BUTTON =================
+local toggle = Instance.new("TextButton", gui)
+toggle.Size = UDim2.new(0, 120, 0, 35)
+toggle.Position = UDim2.new(0, 20, 0.25, 0)
+toggle.Text = "OPEN mi.wtf"
+toggle.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+toggle.TextColor3 = Color3.new(1,1,1)
+
+toggle.MouseButton1Click:Connect(function()
+    gui.Enabled = not gui.Enabled
+    toggle.Text = gui.Enabled and "CLOSE mi.wtf" or "OPEN mi.wtf"
+end)
+
+-- ================= BUTTON FUNCTION =================
+local function btn(text, y, callback)
+    local b = Instance.new("TextButton", frame)
+    b.Size = UDim2.new(1, -10, 0, 40)
+    b.Position = UDim2.new(0, 5, 0, y)
+    b.Text = text
+    b.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.Gotham
+
+    b.MouseButton1Click:Connect(callback)
+end
+
+-- ================= ESP =================
+local espEnabled = false
+
+local function addESP(plr)
+    if plr.Character and not plr.Character:FindFirstChild("Highlight") then
+        local h = Instance.new("Highlight")
+        h.FillColor = Color3.fromRGB(255, 0, 0)
+        h.OutlineColor = Color3.fromRGB(255, 255, 255)
+        h.Parent = plr.Character
+    end
+end
+
+btn("ESP Toggle", 40, function()
+    espEnabled = not espEnabled
+
+    if espEnabled then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= player then
+                addESP(p)
+            end
+        end
+    end
+end)
+
+-- ================= KILL ALL =================
+btn("Kill All", 85, function()
+    event:FireServer("kill_all")
+end)
+
+-- ================= AURA =================
+btn("Kill Aura", 130, function()
+    event:FireServer("aura")
+end)
+
+-- ================= WATERMARK =================
+local watermark = Instance.new("TextLabel", gui)
+watermark.Size = UDim2.new(0, 200, 0, 20)
+watermark.Position = UDim2.new(0, 20, 0.55, 0)
+watermark.BackgroundTransparency = 1
+watermark.Text = "mi.wtf | dev panel"
+watermark.TextColor3 = Color3.fromRGB(100,100,100)
+watermark.TextSize = 12
