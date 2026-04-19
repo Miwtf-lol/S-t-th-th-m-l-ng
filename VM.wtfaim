@@ -1,4 +1,4 @@
---// VM.wtf PRO MAX (Aim NPC + Player + Team Check + Smooth + UI)
+--// VM.wtf PRO MAX (FULL)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -9,16 +9,14 @@ local Camera = workspace.CurrentCamera
 
 -- SETTINGS
 local AimEnabled = false
-local AimPlayers = true
 local TeamCheck = true
-local Smoothness = 0.15
 local FOV_RADIUS = 150
 
 -- GUI
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 
 local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0,220,0,170)
+Main.Size = UDim2.new(0,220,0,180)
 Main.Position = UDim2.new(0,50,0,200)
 Main.BackgroundColor3 = Color3.fromRGB(20,20,20)
 Main.BackgroundTransparency = 0.2
@@ -37,6 +35,73 @@ Title.TextColor3 = Color3.fromRGB(255,100,100)
 Title.Font = Enum.Font.GothamBold
 Title.TextScaled = true
 
+-- Toggle Mini
+local ToggleBtn = Instance.new("TextButton", Main)
+ToggleBtn.Size = UDim2.new(0,25,0,25)
+ToggleBtn.Position = UDim2.new(1,-30,0,5)
+ToggleBtn.Text = "-"
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+ToggleBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", ToggleBtn)
+
+-- Mini Button
+local MiniBtn = Instance.new("TextButton", ScreenGui)
+MiniBtn.Size = UDim2.new(0,100,0,35)
+MiniBtn.Position = UDim2.new(0,50,0,200)
+MiniBtn.Text = "VM.wtf"
+MiniBtn.BackgroundColor3 = Color3.fromRGB(20,20,20)
+MiniBtn.TextColor3 = Color3.fromRGB(255,100,100)
+MiniBtn.Visible = false
+Instance.new("UICorner", MiniBtn)
+
+-- Drag Mini
+MiniBtn.Active = true
+local draggingMini, dragInput, dragStart, startPos
+
+MiniBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingMini = true
+        dragStart = input.Position
+        startPos = MiniBtn.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                draggingMini = false
+            end
+        end)
+    end
+end)
+
+MiniBtn.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and draggingMini then
+        local delta = input.Position - dragStart
+
+        MiniBtn.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Toggle UI
+ToggleBtn.MouseButton1Click:Connect(function()
+    Main.Visible = false
+    MiniBtn.Visible = true
+end)
+
+MiniBtn.MouseButton1Click:Connect(function()
+    Main.Visible = true
+    MiniBtn.Visible = false
+end)
+
 -- BUTTON TEMPLATE
 local function createBtn(text, posY)
     local btn = Instance.new("TextButton", Main)
@@ -51,12 +116,29 @@ end
 
 -- Buttons
 local AimBtn = createBtn("Aim: OFF", 0.25)
-local PlayerBtn = createBtn("Player: ON", 0.5)
-local TeamBtn = createBtn("Team: ON", 0.7)
--- FOV Slider
+local TeamBtn = createBtn("Team: ON", 0.5)
+
+AimBtn.MouseButton1Click:Connect(function()
+    AimEnabled = not AimEnabled
+    AimBtn.Text = AimEnabled and "Aim: ON" or "Aim: OFF"
+end)
+
+TeamBtn.MouseButton1Click:Connect(function()
+    TeamCheck = not TeamCheck
+    TeamBtn.Text = TeamCheck and "Team: ON" or "Team: OFF"
+end)
+
+-- FOV
+local FOV = Drawing.new("Circle")
+FOV.Thickness = 2
+FOV.Color = Color3.fromRGB(255,100,100)
+FOV.Filled = false
+FOV.Visible = true
+
+-- Slider
 local SliderBg = Instance.new("Frame", Main)
 SliderBg.Size = UDim2.new(0.8,0,0,6)
-SliderBg.Position = UDim2.new(0.1,0,0.9,0)
+SliderBg.Position = UDim2.new(0.1,0,0.85,0)
 SliderBg.BackgroundColor3 = Color3.fromRGB(60,60,60)
 Instance.new("UICorner", SliderBg)
 
@@ -74,21 +156,20 @@ Instance.new("UICorner", SliderBtn)
 local dragging = false
 
 SliderBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
     end
 end)
 
 UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
     end
 end)
 
 UIS.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local mouseX = input.Position.X
-        local relative = (mouseX - SliderBg.AbsolutePosition.X) / SliderBg.AbsoluteSize.X
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local relative = (input.Position.X - SliderBg.AbsolutePosition.X) / SliderBg.AbsoluteSize.X
         relative = math.clamp(relative, 0, 1)
 
         SliderFill.Size = UDim2.new(relative,0,1,0)
@@ -98,45 +179,18 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
-AimBtn.MouseButton1Click:Connect(function()
-    AimEnabled = not AimEnabled
-    AimBtn.Text = AimEnabled and "Aim: ON" or "Aim: OFF"
-end)
-
-PlayerBtn.MouseButton1Click:Connect(function()
-    AimPlayers = not AimPlayers
-    PlayerBtn.Text = AimPlayers and "Player: ON" or "Player: OFF"
-end)
-
-TeamBtn.MouseButton1Click:Connect(function()
-    TeamCheck = not TeamCheck
-    TeamBtn.Text = TeamCheck and "Team: ON" or "Team: OFF"
-end)
-
--- FOV
-local FOV = Drawing.new("Circle")
-FOV.Radius = FOV_RADIUS
-FOV.Thickness = 2
-FOV.Color = Color3.fromRGB(255,100,100)
-FOV.Filled = false
-FOV.Visible = true
-
--- TARGET FIND
+-- TARGET (PLAYER ONLY)
 local function getTarget()
     local closest = nil
     local shortest = math.huge
 
     for _, v in pairs(workspace:GetChildren()) do
-    local player = Players:GetPlayerFromCharacter(v)
+        local player = Players:GetPlayerFromCharacter(v)
 
-    if player and player ~= LocalPlayer then
+        if player and player ~= LocalPlayer then
             
-            local player = Players:GetPlayerFromCharacter(v)
-
-            -- check player toggle
-            if player then
-                if not AimPlayers then continue end
-                if TeamCheck and player.Team == LocalPlayer.Team then continue end
+            if TeamCheck and player.Team == LocalPlayer.Team then
+                continue
             end
 
             local head = v:FindFirstChild("Head")
@@ -144,8 +198,7 @@ local function getTarget()
                 local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
                 if onScreen then
                     local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(FOV.Position.X, FOV.Position.Y)).Magnitude
-                    
-                    -- ưu tiên gần tâm + gần
+
                     if dist < FOV_RADIUS and dist < shortest then
                         shortest = dist
                         closest = head
@@ -158,17 +211,16 @@ local function getTarget()
     return closest
 end
 
--- SMOOTH AIM
+-- LOOP (SNAP AIM)
 RunService.RenderStepped:Connect(function()
     FOV.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-FOV.Radius = FOV_RADIUS
+    FOV.Radius = FOV_RADIUS
+
     if AimEnabled then
         local target = getTarget()
         if target then
-            local current = Camera.CFrame
-            local targetCF = CFrame.new(current.Position, target.Position)
-            
-            Camera.CFrame = current:Lerp(targetCF, Smoothness)
+            local targetCF = CFrame.new(Camera.CFrame.Position, target.Position)
+            Camera.CFrame = targetCF
         end
     end
 end)
