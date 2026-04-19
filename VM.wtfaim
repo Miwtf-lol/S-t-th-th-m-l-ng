@@ -53,6 +53,50 @@ end
 local AimBtn = createBtn("Aim: OFF", 0.25)
 local PlayerBtn = createBtn("Player: ON", 0.5)
 local TeamBtn = createBtn("Team: ON", 0.7)
+-- FOV Slider
+local SliderBg = Instance.new("Frame", Main)
+SliderBg.Size = UDim2.new(0.8,0,0,6)
+SliderBg.Position = UDim2.new(0.1,0,0.9,0)
+SliderBg.BackgroundColor3 = Color3.fromRGB(60,60,60)
+Instance.new("UICorner", SliderBg)
+
+local SliderFill = Instance.new("Frame", SliderBg)
+SliderFill.Size = UDim2.new(0.5,0,1,0)
+SliderFill.BackgroundColor3 = Color3.fromRGB(255,100,100)
+Instance.new("UICorner", SliderFill)
+
+local SliderBtn = Instance.new("Frame", SliderBg)
+SliderBtn.Size = UDim2.new(0,10,0,10)
+SliderBtn.Position = UDim2.new(0.5,-5,0.5,-5)
+SliderBtn.BackgroundColor3 = Color3.fromRGB(255,255,255)
+Instance.new("UICorner", SliderBtn)
+
+local dragging = false
+
+SliderBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local mouseX = input.Position.X
+        local relative = (mouseX - SliderBg.AbsolutePosition.X) / SliderBg.AbsoluteSize.X
+        relative = math.clamp(relative, 0, 1)
+
+        SliderFill.Size = UDim2.new(relative,0,1,0)
+        SliderBtn.Position = UDim2.new(relative,-5,0.5,-5)
+
+        FOV_RADIUS = math.floor(50 + (350 * relative))
+    end
+end)
 
 AimBtn.MouseButton1Click:Connect(function()
     AimEnabled = not AimEnabled
@@ -117,7 +161,7 @@ end
 -- SMOOTH AIM
 RunService.RenderStepped:Connect(function()
     FOV.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-
+FOV.Radius = FOV_RADIUS
     if AimEnabled then
         local target = getTarget()
         if target then
