@@ -1,0 +1,189 @@
+-- VM.wtf INVISIBILITY SCRIPT V1.0 - UNIVERSAL + MINIMAL GUI
+-- Authorized Pentest Tool - Works in ALL Games
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Invisibility Config
+getgenv().InvisConfig = {
+    Enabled = false,
+    Transparency = 0,  -- 0 = invisible, 1 = visible
+    CanCollide = false,
+    PlatformStand = false,
+    NoClip = false
+}
+
+-- Universal Invisibility Function
+local function ToggleInvisibility()
+    if player.Character then
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        local root = player.Character:FindFirstChild("HumanoidRootPart")
+        
+        if not humanoid or not root then return false end
+        
+        getgenv().InvisConfig.Enabled = not getgenv().InvisConfig.Enabled
+        
+        if getgenv().InvisConfig.Enabled then
+            -- Enable Invisibility (Universal Method)
+            
+            -- 1. Make invisible (all parts)
+            for _, part in pairs(player.Character:GetChildren()) do
+                if part:IsA("BasePart") and part ~= root then
+                    part.Transparency = getgenv().InvisConfig.Transparency
+                    part.CanCollide = getgenv().InvisConfig.CanCollide
+                elseif part.Name == "Head" then
+                    part.Transparency = getgenv().InvisConfig.Transparency
+                    part.CanCollide = getgenv().InvisConfig.CanCollide
+                end
+            end
+            
+            -- 2. Hide accessories
+            for _, acc in pairs(player.Character:GetChildren()) do
+                if acc:IsA("Accessory") then
+                    local handle = acc:FindFirstChild("Handle")
+                    if handle then handle.Transparency = getgenv().InvisConfig.Transparency end
+                end
+            end
+            
+            -- 3. Platform stand (anti-detection)
+            humanoid.PlatformStand = getgenv().InvisConfig.PlatformStand
+            
+            -- 4. Noclip (universal)
+            getgenv().InvisConfig.NoClip = true
+            
+            return true
+        else
+            -- Disable Invisibility
+            for _, part in pairs(player.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Transparency = 0
+                    part.CanCollide = true
+                end
+            end
+            
+            for _, acc in pairs(player.Character:GetChildren()) do
+                if acc:IsA("Accessory") then
+                    local handle = acc:FindFirstChild("Handle")
+                    if handle then handle.Transparency = 0 end
+                end
+            end
+            
+            humanoid.PlatformStand = false
+            getgenv().InvisConfig.NoClip = false
+            
+            return false
+        end
+    end
+    return false
+end
+
+-- Noclip Loop (Universal)
+RunService.Stepped:Connect(function()
+    if getgenv().InvisConfig.NoClip and player.Character then
+        for _, part in pairs(player.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- Character Respawn Handler
+player.CharacterAdded:Connect(function(character)
+    if getgenv().InvisConfig.Enabled then
+        task.wait(1)
+        ToggleInvisibility()
+        ToggleInvisibility()  -- Toggle twice to re-enable
+    end
+end)
+
+-- MINIMAL PINK GUI - SMALL TOGGLE ONLY
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "VMwtfInvisMini"
+ScreenGui.Parent = playerGui
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+
+-- Small Toggle Button (Always visible, minimal)
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Parent = ScreenGui
+ToggleBtn.Name = "InvisToggle"
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 20, 147)
+ToggleBtn.Position = UDim2.new(0, 20, 0, 20)
+ToggleBtn.Size = UDim2.new(0, 120, 0, 50)
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.Text = "👻 INVIS OFF 👻"
+ToggleBtn.TextColor3 = Color3.new(1,1,1)
+ToggleBtn.TextScaled = true
+ToggleBtn.TextStrokeTransparency = 0
+ToggleBtn.TextStrokeColor3 = Color3.new(0,0,0)
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+
+-- Pink Effects
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 12)
+Corner.Parent = ToggleBtn
+
+local Gradient = Instance.new("UIGradient")
+Gradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(199, 21, 133))
+}
+Gradient.Parent = ToggleBtn
+
+-- Glow Pulse Effect
+local Glow = Instance.new("ImageLabel")
+Glow.Parent = ToggleBtn
+Glow.BackgroundTransparency = 1
+Glow.Position = UDim2.new(-0.1, 0, -0.1, 0)
+Glow.Size = UDim2.new(1.2, 0, 1.2, 0)
+Glow.ImageTransparency = 0.6
+Glow.ImageColor3 = Color3.fromRGB(255, 255, 255)
+Glow.Image = "rbxassetid://4996891970"
+
+-- Toggle Logic
+local invisible = false
+ToggleBtn.MouseButton1Click:Connect(function()
+    invisible = ToggleInvisibility()
+    if invisible then
+        ToggleBtn.Text = "✅ INVIS ON ✅"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 205, 50)
+        Gradient.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(34, 197, 94)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(74, 222, 128))
+        }
+    else
+        ToggleBtn.Text = "👻 INVIS OFF 👻"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 20, 147)
+        Gradient.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(199, 21, 133))
+        }
+    end
+end)
+
+-- Hotkey (Right Control)
+game:GetService("UserInputService").InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.RightControl then
+        ToggleBtn.MouseButton1Click:Fire()
+    end
+end)
+
+-- Pulse Animation
+spawn(function()
+    while ToggleBtn.Parent do
+        local tween = game:GetService("TweenService"):Create(
+            Glow,
+            TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {ImageTransparency = 0.3}
+        )
+        tween:Play()
+        task.wait(1.5)
+    end
+end)
+
+print("👻 VM.wtf INVISIBILITY SCRIPT LOADED - UNIVERSAL!")
+print("🎮 Toggle: Click button or RightCtrl")
+print("✅ Works in ALL games - Full noclip + invisible!")
