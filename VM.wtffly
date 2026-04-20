@@ -1,156 +1,152 @@
---// VM.wtf FULL (GIỮ NGUYÊN FLY GỐC)
-
---// LOADING (mượt, không lag)
+--// VM.wtf LOADING
 task.spawn(function()
-	for i = 1,100,5 do
+	for i = 1,100,10 do
 		game:GetService("StarterGui"):SetCore("SendNotification", {
 			Title = "VM.wtf",
 			Text = "Loading... "..i.."%"
 		})
 		task.wait(0.08)
 	end
-
-	game:GetService("StarterGui"):SetCore("SendNotification", {
-		Title = "VM.wtf",
-		Text = "Loaded!",
-		Duration = 3
-	})
 end)
 
---// GUI (NÂNG CẤP NHẸ)
+--// GUI
 local main = Instance.new("ScreenGui")
-local Frame = Instance.new("Frame")
-local up = Instance.new("TextButton")
-local down = Instance.new("TextButton")
-local onof = Instance.new("TextButton")
-local TextLabel = Instance.new("TextLabel")
-local plus = Instance.new("TextButton")
-local speed = Instance.new("TextLabel")
-local mine = Instance.new("TextButton")
-local closebutton = Instance.new("TextButton")
-local mini = Instance.new("TextButton")
-local mini2 = Instance.new("TextButton")
-
-main.Name = "VM.wtf"
 main.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-main.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+main.Name = "VM.wtf"
 main.ResetOnSpawn = false
 
-Frame.Parent = main
-Frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-Frame.BorderSizePixel = 0
-Frame.Position = UDim2.new(0.1, 0, 0.35, 0)
-Frame.Size = UDim2.new(0, 200, 0, 65)
+local Frame = Instance.new("Frame", main)
+Frame.Size = UDim2.new(0,220,0,70)
+Frame.Position = UDim2.new(0.1,0,0.35,0)
+Frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 Frame.Active = true
 Frame.Draggable = true
 
--- TITLE
-TextLabel.Parent = Frame
-TextLabel.Size = UDim2.new(1, 0, 0, 25)
-TextLabel.Text = "VM.wtf"
-TextLabel.TextColor3 = Color3.fromRGB(255,255,255)
-TextLabel.BackgroundTransparency = 1
-TextLabel.TextScaled = true
+local title = Instance.new("TextLabel", Frame)
+title.Size = UDim2.new(1,0,0,20)
+title.Text = "VM.wtf"
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundTransparency = 1
+title.TextScaled = true
 
--- BUTTON STYLE FUNCTION
-local function style(btn, color)
-	btn.BackgroundColor3 = color
-	btn.TextColor3 = Color3.fromRGB(255,255,255)
-	btn.BorderSizePixel = 0
-	btn.Font = Enum.Font.SourceSansBold
-	btn.TextScaled = true
-end
-
--- UP
-up.Parent = Frame
-up.Size = UDim2.new(0, 50, 0, 30)
-up.Position = UDim2.new(0, 0, 0.5, 0)
+-- BUTTONS
+local up = Instance.new("TextButton", Frame)
+up.Size = UDim2.new(0,40,0,20)
+up.Position = UDim2.new(0,0,0.4,0)
 up.Text = "UP"
-style(up, Color3.fromRGB(0,170,255))
 
--- DOWN
-down.Parent = Frame
-down.Size = UDim2.new(0, 50, 0, 30)
-down.Position = UDim2.new(0, 0, 1, -30)
+local down = Instance.new("TextButton", Frame)
+down.Size = UDim2.new(0,40,0,20)
+down.Position = UDim2.new(0,0,0.75,0)
 down.Text = "DOWN"
-style(down, Color3.fromRGB(0,120,255))
 
--- FLY
-onof.Parent = Frame
-onof.Size = UDim2.new(0, 60, 0, 30)
-onof.Position = UDim2.new(1, -60, 1, -30)
-onof.Text = "FLY"
-style(onof, Color3.fromRGB(255,170,0))
+local plus1 = Instance.new("TextButton", Frame)
+plus1.Size = UDim2.new(0,35,0,20)
+plus1.Position = UDim2.new(0.2,0,0.4,0)
+plus1.Text = "+1"
 
--- PLUS
-plus.Parent = Frame
-plus.Size = UDim2.new(0, 40, 0, 30)
-plus.Position = UDim2.new(0.25, 0, 0.5, 0)
-plus.Text = "+"
-style(plus, Color3.fromRGB(0,255,150))
+local plus10 = Instance.new("TextButton", Frame)
+plus10.Size = UDim2.new(0,35,0,20)
+plus10.Position = UDim2.new(0.35,0,0.4,0)
+plus10.Text = "+10"
 
--- MINUS
-mine.Parent = Frame
-mine.Size = UDim2.new(0, 40, 0, 30)
-mine.Position = UDim2.new(0.25, 0, 1, -30)
-mine.Text = "-"
-style(mine, Color3.fromRGB(255,100,100))
+local mine1 = Instance.new("TextButton", Frame)
+mine1.Size = UDim2.new(0,35,0,20)
+mine1.Position = UDim2.new(0.2,0,0.75,0)
+mine1.Text = "-1"
 
--- SPEED
-speed.Parent = Frame
-speed.Size = UDim2.new(0, 50, 0, 30)
-speed.Position = UDim2.new(0.5, 0, 1, -30)
+local mine10 = Instance.new("TextButton", Frame)
+mine10.Size = UDim2.new(0,35,0,20)
+mine10.Position = UDim2.new(0.35,0,0.75,0)
+mine10.Text = "-10"
+
+local speed = Instance.new("TextLabel", Frame)
+speed.Size = UDim2.new(0,40,0,20)
+speed.Position = UDim2.new(0.55,0,0.75,0)
 speed.Text = "1"
-speed.TextScaled = true
-speed.BackgroundColor3 = Color3.fromRGB(60,60,60)
-speed.TextColor3 = Color3.fromRGB(255,255,255)
-speed.BorderSizePixel = 0
+speed.BackgroundColor3 = Color3.fromRGB(50,50,50)
+speed.TextColor3 = Color3.new(1,1,1)
+
+local fly = Instance.new("TextButton", Frame)
+fly.Size = UDim2.new(0,50,0,20)
+fly.Position = UDim2.new(0.75,0,0.75,0)
+fly.Text = "FLY"
+fly.BackgroundColor3 = Color3.fromRGB(255,170,0)
 
 -- CLOSE
-closebutton.Parent = Frame
-closebutton.Size = UDim2.new(0, 30, 0, 25)
-closebutton.Position = UDim2.new(0, 0, -1, 25)
-closebutton.Text = "X"
-style(closebutton, Color3.fromRGB(255,50,50))
+local close = Instance.new("TextButton", Frame)
+close.Size = UDim2.new(0,30,0,20)
+close.Position = UDim2.new(0,0,-1,20)
+close.Text = "X"
+close.BackgroundColor3 = Color3.fromRGB(255,0,0)
 
 -- MINI
-mini.Parent = Frame
-mini.Size = UDim2.new(0, 30, 0, 25)
-mini.Position = UDim2.new(0, 30, -1, 25)
+local mini = Instance.new("TextButton", Frame)
+mini.Size = UDim2.new(0,30,0,20)
+mini.Position = UDim2.new(0,30,-1,20)
 mini.Text = "-"
-style(mini, Color3.fromRGB(150,100,255))
+mini.BackgroundColor3 = Color3.fromRGB(150,100,255)
 
-mini2.Parent = Frame
-mini2.Size = UDim2.new(0, 30, 0, 25)
-mini2.Position = UDim2.new(0, 30, -1, 55)
+local mini2 = Instance.new("TextButton", Frame)
+mini2.Size = UDim2.new(0,30,0,20)
+mini2.Position = UDim2.new(0,30,-1,45)
 mini2.Text = "+"
 mini2.Visible = false
-style(mini2, Color3.fromRGB(150,100,255))
+mini2.BackgroundColor3 = Color3.fromRGB(150,100,255)
 
--- MINI LOGIC PRO
+-- MINI LOGIC
 mini.MouseButton1Click:Connect(function()
 	for _,v in pairs(Frame:GetChildren()) do
-		if v:IsA("TextButton") or v:IsA("TextLabel") then
-			if v ~= mini2 then
-				v.Visible = false
-			end
+		if v ~= mini2 then
+			v.Visible = false
 		end
 	end
 	mini2.Visible = true
-	Frame.Size = UDim2.new(0, 60, 0, 60)
+	Frame.Size = UDim2.new(0,60,0,60)
 end)
 
 mini2.MouseButton1Click:Connect(function()
 	for _,v in pairs(Frame:GetChildren()) do
 		v.Visible = true
 	end
-	Frame.Size = UDim2.new(0, 200, 0, 65)
+	Frame.Size = UDim2.new(0,220,0,70)
 end)
 
-closebutton.MouseButton1Click:Connect(function()
+close.MouseButton1Click:Connect(function()
 	main:Destroy()
 end)
 
---// ⚠️ QUAN TRỌNG
--- PHẦN DƯỚI ĐÂY BẠN DÁN NGUYÊN 100% CODE FLY CŨ CỦA BẠN VÀO
--- KHÔNG SỬA, KHÔNG XÓA
+--// SPEED SYSTEM (MAX 300)
+local speeds = 1
+speed.Text = speeds
+
+local function updateSpeed()
+	if speeds < 1 then speeds = 1 end
+	if speeds > 300 then speeds = 300 end
+	speed.Text = speeds
+end
+
+plus1.MouseButton1Click:Connect(function()
+	speeds += 1
+	updateSpeed()
+end)
+
+plus10.MouseButton1Click:Connect(function()
+	speeds += 10
+	updateSpeed()
+end)
+
+mine1.MouseButton1Click:Connect(function()
+	speeds -= 1
+	updateSpeed()
+end)
+
+mine10.MouseButton1Click:Connect(function()
+	speeds -= 10
+	updateSpeed()
+end)
+
+-- ⚠️ QUAN TRỌNG
+-- NỐI với fly gốc của bạn:
+-- thay "onof" trong code cũ thành "fly"
+-- giữ nguyên toàn bộ code bay bên dưới
