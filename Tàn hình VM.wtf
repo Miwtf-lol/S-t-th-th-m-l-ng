@@ -1,67 +1,119 @@
--- VM.wtf INVISIBILITY SCRIPT V1.0 - UNIVERSAL + MINIMAL GUI
--- Authorized Pentest Tool - Works in ALL Games
+-- VM.wtf UNDERGROUND INVISIBILITY V2.0 - HIDE BELOW GROUND
+-- 👻 Invisible + Underground + See Others - Universal!
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Invisibility Config
-getgenv().InvisConfig = {
+-- Underground Config
+getgenv().UndergroundInvis = {
     Enabled = false,
-    Transparency = 0,  -- 0 = invisible, 1 = visible
-    CanCollide = false,
-    PlatformStand = false,
-    NoClip = false
+    Depth = -150,  -- Underground depth
+    Transparency = 0,
+    Speed = 50,
+    NoClip = false,
+    CameraOffset = Vector3.new(0, 50, 0)  -- Camera above ground
 }
 
--- Universal Invisibility Function
-local function ToggleInvisibility()
-    if player.Character then
+-- Underground + Invisible System
+local BodyPosition = nil
+local BodyVelocity = nil
+local NoClipConnection = nil
+local CameraConnection = nil
+local OriginalCFrame = nil
+
+local function ToggleUnderground()
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         local humanoid = player.Character:FindFirstChild("Humanoid")
-        local root = player.Character:FindFirstChild("HumanoidRootPart")
+        local root = player.Character.HumanoidRootPart
         
         if not humanoid or not root then return false end
         
-        getgenv().InvisConfig.Enabled = not getgenv().InvisConfig.Enabled
+        getgenv().UndergroundInvis.Enabled = not getgenv().UndergroundInvis.Enabled
         
-        if getgenv().InvisConfig.Enabled then
-            -- Enable Invisibility (Universal Method)
+        if getgenv().UndergroundInvis.Enabled then
+            -- SAVE ORIGINAL POSITION
+            OriginalCFrame = root.CFrame
             
-            -- 1. Make invisible (all parts)
+            -- 1. Make INVISIBLE
             for _, part in pairs(player.Character:GetChildren()) do
-                if part:IsA("BasePart") and part ~= root then
-                    part.Transparency = getgenv().InvisConfig.Transparency
-                    part.CanCollide = getgenv().InvisConfig.CanCollide
-                elseif part.Name == "Head" then
-                    part.Transparency = getgenv().InvisConfig.Transparency
-                    part.CanCollide = getgenv().InvisConfig.CanCollide
+                if part:IsA("BasePart") then
+                    part.Transparency = getgenv().UndergroundInvis.Transparency
+                    part.CanCollide = false
                 end
             end
-            
-            -- 2. Hide accessories
             for _, acc in pairs(player.Character:GetChildren()) do
                 if acc:IsA("Accessory") then
                     local handle = acc:FindFirstChild("Handle")
-                    if handle then handle.Transparency = getgenv().InvisConfig.Transparency end
+                    if handle then handle.Transparency = getgenv().UndergroundInvis.Transparency end
                 end
             end
             
-            -- 3. Platform stand (anti-detection)
-            humanoid.PlatformStand = getgenv().InvisConfig.PlatformStand
+            -- 2. GO UNDERGROUND (Smooth)
+            BodyPosition = Instance.new("BodyPosition")
+            BodyPosition.MaxForce = Vector3.new(4000, 4000, 4000)
+            BodyPosition.Position = root.Position + Vector3.new(0, getgenv().UndergroundInvis.Depth, 0)
+            BodyPosition.D = 1000
+            BodyPosition.P = 5000
+            BodyPosition.Parent = root
             
-            -- 4. Noclip (universal)
-            getgenv().InvisConfig.NoClip = true
+            -- 3. Movement Control
+            BodyVelocity = Instance.new("BodyVelocity")
+            BodyVelocity.MaxForce = Vector3.new(4000, 0, 4000)  -- Lock Y position
+            BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            BodyVelocity.Parent = root
             
+            -- 4. Noclip
+            getgenv().UndergroundInvis.NoClip = true
+            
+            -- 5. CAMERA ABOVE GROUND (See others)
+            CameraConnection = RunService.RenderStepped:Connect(function()
+                local camera = workspace.CurrentCamera
+                if camera.CameraSubject == humanoid then
+                    local surfacePos = root.Position + Vector3.new(0, -getgenv().UndergroundInvis.Depth + 10, 0)
+                    camera.CFrame = CFrame.new(surfacePos + getgenv().UndergroundInvis.CameraOffset, surfacePos)
+                end
+            end)
+            
+            -- 6. Movement Input
+            NoClipConnection = RunService.Heartbeat:Connect(function()
+                if getgenv().UndergroundInvis.NoClip then
+                    local camera = workspace.CurrentCamera
+                    local vel = Vector3.new(0, 0, 0)
+                    
+                    -- WASD + QE Movement (Y locked underground)
+                    if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then vel = vel + camera.CFrame.LookVector end
+                    if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) then vel = vel - camera.CFrame.LookVector end
+                    if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) then vel = vel - camera.CFrame.RightVector end
+                    if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) then vel = vel + camera.CFrame.RightVector end
+                    
+                    BodyVelocity.Velocity = Vector3.new(vel.X * (getgenv().UndergroundInvis.Speed / 10), 0, vel.Z * (getgenv().UndergroundInvis.Speed / 10))
+                    
+                    -- Noclip all parts
+                    for _, part in pairs(player.Character:GetDescendants()) do
+                        if part:IsA("BasePart") then part.CanCollide = false end
+                    end
+                end
+            end)
+            
+            humanoid.PlatformStand = true
             return true
+            
         else
-            -- Disable Invisibility
+            -- DISABLE (Return to surface)
+            if BodyPosition then BodyPosition:Destroy() end
+            if BodyVelocity then BodyVelocity:Destroy() end
+            if NoClipConnection then NoClipConnection:Disconnect() end
+            if CameraConnection then CameraConnection:Disconnect() end
+            
+            -- Restore visibility
             for _, part in pairs(player.Character:GetChildren()) do
                 if part:IsA("BasePart") then
                     part.Transparency = 0
                     part.CanCollide = true
                 end
             end
-            
             for _, acc in pairs(player.Character:GetChildren()) do
                 if acc:IsA("Accessory") then
                     local handle = acc:FindFirstChild("Handle")
@@ -70,7 +122,19 @@ local function ToggleInvisibility()
             end
             
             humanoid.PlatformStand = false
-            getgenv().InvisConfig.NoClip = false
+            getgenv().UndergroundInvis.NoClip = false
+            
+            -- Smooth return to surface
+            if OriginalCFrame then
+                BodyPosition = Instance.new("BodyPosition")
+                BodyPosition.MaxForce = Vector3.new(4000, 4000, 4000)
+                BodyPosition.Position = OriginalCFrame.Position
+                BodyPosition.D = 1000
+                BodyPosition.P = 5000
+                BodyPosition.Parent = root
+                task.wait(2)
+                if BodyPosition then BodyPosition:Destroy() end
+            end
             
             return false
         end
@@ -78,112 +142,93 @@ local function ToggleInvisibility()
     return false
 end
 
--- Noclip Loop (Universal)
-RunService.Stepped:Connect(function()
-    if getgenv().InvisConfig.NoClip and player.Character then
-        for _, part in pairs(player.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
+-- Respawn Handler
+player.CharacterAdded:Connect(function()
+    if getgenv().UndergroundInvis.Enabled then
+        task.wait(2)
+        ToggleUnderground()
+        ToggleUnderground()
     end
 end)
 
--- Character Respawn Handler
-player.CharacterAdded:Connect(function(character)
-    if getgenv().InvisConfig.Enabled then
-        task.wait(1)
-        ToggleInvisibility()
-        ToggleInvisibility()  -- Toggle twice to re-enable
-    end
-end)
-
--- MINIMAL PINK GUI - SMALL TOGGLE ONLY
+-- MINI PINK GUI - ULTRA SMALL
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VMwtfInvisMini"
+ScreenGui.Name = "VMwtfUndergroundMini"
 ScreenGui.Parent = playerGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 
--- Small Toggle Button (Always visible, minimal)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Parent = ScreenGui
-ToggleBtn.Name = "InvisToggle"
+ToggleBtn.Name = "UndergroundToggle"
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 20, 147)
-ToggleBtn.Position = UDim2.new(0, 20, 0, 20)
-ToggleBtn.Size = UDim2.new(0, 120, 0, 50)
+ToggleBtn.Position = UDim2.new(0, 20, 0, 80)
+ToggleBtn.Size = UDim2.new(0, 110, 0, 45)
 ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.Text = "👻 INVIS OFF 👻"
+ToggleBtn.Text = "🌋 UNDER OFF"
 ToggleBtn.TextColor3 = Color3.new(1,1,1)
 ToggleBtn.TextScaled = true
-ToggleBtn.TextStrokeTransparency = 0
-ToggleBtn.TextStrokeColor3 = Color3.new(0,0,0)
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 
--- Pink Effects
+-- Pink Styling
 local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 12)
+Corner.CornerRadius = UDim.new(0, 10)
 Corner.Parent = ToggleBtn
 
 local Gradient = Instance.new("UIGradient")
 Gradient.Color = ColorSequence.new{
     ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(199, 21, 133))
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(139, 0, 139))
 }
 Gradient.Parent = ToggleBtn
 
--- Glow Pulse Effect
+-- Glow Effect
 local Glow = Instance.new("ImageLabel")
 Glow.Parent = ToggleBtn
 Glow.BackgroundTransparency = 1
-Glow.Position = UDim2.new(-0.1, 0, -0.1, 0)
-Glow.Size = UDim2.new(1.2, 0, 1.2, 0)
-Glow.ImageTransparency = 0.6
-Glow.ImageColor3 = Color3.fromRGB(255, 255, 255)
-Glow.Image = "rbxassetid://4996891970"
+Glow.Position = UDim2.new(-0.15, 0, -0.15, 0)
+Glow.Size = UDim2.new(1.3, 0, 1.3, 0)
+Glow.ImageTransparency = 0.5
+Glow.ImageColor3 = Color3.fromRGB(255, 215, 0)
 
 -- Toggle Logic
-local invisible = false
 ToggleBtn.MouseButton1Click:Connect(function()
-    invisible = ToggleInvisibility()
-    if invisible then
-        ToggleBtn.Text = "✅ INVIS ON ✅"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 205, 50)
+    local success = ToggleUnderground()
+    if success then
+        ToggleBtn.Text = "✅ UNDER ON"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 127)
         Gradient.Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(34, 197, 94)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(74, 222, 128))
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 127)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 200, 83))
         }
     else
-        ToggleBtn.Text = "👻 INVIS OFF 👻"
+        ToggleBtn.Text = "🌋 UNDER OFF"
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(255, 20, 147)
         Gradient.Color = ColorSequence.new{
             ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(199, 21, 133))
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(139, 0, 139))
         }
     end
 end)
 
--- Hotkey (Right Control)
+-- Hotkey: Left Alt
 game:GetService("UserInputService").InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.RightControl then
+    if input.KeyCode == Enum.KeyCode.LeftAlt then
         ToggleBtn.MouseButton1Click:Fire()
     end
 end)
 
--- Pulse Animation
+-- Animation
 spawn(function()
     while ToggleBtn.Parent do
-        local tween = game:GetService("TweenService"):Create(
-            Glow,
-            TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-            {ImageTransparency = 0.3}
-        )
-        tween:Play()
-        task.wait(1.5)
+        TweenService:Create(Glow, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), 
+            {ImageTransparency = 0.2}):Play()
+        task.wait(2)
     end
 end)
 
-print("👻 VM.wtf INVISIBILITY SCRIPT LOADED - UNIVERSAL!")
-print("🎮 Toggle: Click button or RightCtrl")
-print("✅ Works in ALL games - Full noclip + invisible!")
+print("🌋 VM.wtf UNDERGROUND INVISIBILITY LOADED!")
+print("👻 You: Underground + Invisible | Others: Can't see you")
+print("📹 Camera: Above ground (see everyone) | Hotkey: LeftAlt")
+print("🎮 WASD: Move underground | Ultra small GUI!")
