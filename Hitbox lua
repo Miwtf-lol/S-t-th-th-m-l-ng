@@ -1,4 +1,4 @@
---// MI.WTF FULL FIX (HITBOX + AIMLOCK + MINI UI)
+--// MI.WTF FULL VIP (HITBOX + AIMLOCK + ESP + MINI UI)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -11,16 +11,96 @@ local Mouse = LP:GetMouse()
 -- SETTINGS
 local HitboxEnabled = false
 local AimlockEnabled = false
+local ESPEnabled = false
+
 local HitboxSize = 5
 local MAX_SIZE = 10
 
--- TARGET
 local Target = nil
+local ESPs = {}
 
--- FIND TARGET GẦN NHẤT
+-- RESET HITBOX
+local function resetChar(char)
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local hrp = char.HumanoidRootPart
+        hrp.Size = Vector3.new(2,2,1)
+        hrp.Transparency = 0
+    end
+end
+
+-- APPLY HITBOX
+local function applyChar(char)
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.Died:Connect(function()
+            resetChar(char)
+        end)
+    end
+end
+
+-- ESP FUNCTION
+local function createESP(player)
+    if player == LP then return end
+
+    local function apply(char)
+        local head = char:FindFirstChild("Head")
+        if not head then return end
+
+        if ESPs[player] then ESPs[player]:Destroy() end
+
+        local bill = Instance.new("BillboardGui")
+        bill.Adornee = head
+        bill.Size = UDim2.new(0,100,0,40)
+        bill.StudsOffset = Vector3.new(0,2,0)
+        bill.AlwaysOnTop = true
+
+        local name = Instance.new("TextLabel", bill)
+        name.Size = UDim2.new(1,0,1,0)
+        name.BackgroundTransparency = 1
+        name.Text = player.Name
+        name.TextColor3 = Color3.fromRGB(255,100,255)
+        name.TextStrokeTransparency = 0
+        name.TextScaled = true
+
+        bill.Parent = char
+        ESPs[player] = bill
+    end
+
+    if player.Character then
+        apply(player.Character)
+    end
+
+    player.CharacterAdded:Connect(function(char)
+        task.wait(1)
+        if ESPEnabled then
+            apply(char)
+        end
+    end)
+end
+
+-- APPLY PLAYER
+for _, v in pairs(Players:GetPlayers()) do
+    if v ~= LP then
+        if v.Character then applyChar(v.Character) end
+        createESP(v)
+        v.CharacterAdded:Connect(function(char)
+            applyChar(char)
+        end)
+    end
+end
+
+Players.PlayerAdded:Connect(function(v)
+    if v ~= LP then
+        v.CharacterAdded:Connect(function(char)
+            applyChar(char)
+        end)
+        createESP(v)
+    end
+end)
+
+-- AIMLOCK
 local function getClosest()
-    local closest = nil
-    local dist = math.huge
+    local closest, dist = nil, math.huge
 
     for _, v in pairs(Players:GetPlayers()) do
         if v ~= LP and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
@@ -37,37 +117,37 @@ local function getClosest()
     return closest
 end
 
--- AIMLOCK
 RunService.RenderStepped:Connect(function()
+    -- AIMLOCK
     if AimlockEnabled then
         Target = getClosest()
         if Target and Target.Character and Target.Character:FindFirstChild("HumanoidRootPart") then
             Camera.CFrame = CFrame.new(Camera.CFrame.Position, Target.Character.HumanoidRootPart.Position)
         end
     end
-end)
 
--- HITBOX (CLIENT VISUAL + AIM SUPPORT)
-RunService.RenderStepped:Connect(function()
+    -- HITBOX
     if HitboxEnabled then
         for _, v in pairs(Players:GetPlayers()) do
             if v ~= LP and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
                 local hrp = v.Character.HumanoidRootPart
-                hrp.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
-                hrp.Transparency = 0.7
-                hrp.CanCollide = false
+                local hum = v.Character:FindFirstChildOfClass("Humanoid")
+
+                if hum and hum.Health > 0 then
+                    hrp.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
+                    hrp.Transparency = 0.7
+                    hrp.CanCollide = false
+                end
             end
         end
     end
 end)
 
--- RESET
-local function resetHitbox()
+-- RESET ALL
+local function resetAll()
     for _, v in pairs(Players:GetPlayers()) do
-        if v ~= LP and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = v.Character.HumanoidRootPart
-            hrp.Size = Vector3.new(2,2,1)
-            hrp.Transparency = 0
+        if v ~= LP and v.Character then
+            resetChar(v.Character)
         end
     end
 end
@@ -76,17 +156,28 @@ end
 local gui = Instance.new("ScreenGui", game.CoreGui)
 
 local Frame = Instance.new("Frame", gui)
-Frame.Size = UDim2.new(0,200,0,180)
+Frame.Size = UDim2.new(0,200,0,220)
 Frame.Position = UDim2.new(0.1,0,0.3,0)
 Frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
 Frame.Active = true
 Frame.Draggable = true
 
-local OpenBtn = Instance.new("TextButton", gui)
+Instance.new("UICorner", Frame)
+
+-- LOGO
+local Icon = Instance.new("ImageLabel", Frame)
+Icon.Size = UDim2.new(0,40,0,40)
+Icon.Position = UDim2.new(0,5,0,5)
+Icon.BackgroundTransparency = 1
+Icon.Image = "rbxassetid://135283977825181"
+
+-- MINI BUTTON
+local OpenBtn = Instance.new("ImageButton", gui)
 OpenBtn.Size = UDim2.new(0,50,0,50)
 OpenBtn.Position = UDim2.new(0,10,0.5,0)
-OpenBtn.Text = "UI"
+OpenBtn.Image = "rbxassetid://135283977825181"
 OpenBtn.Visible = false
+OpenBtn.BackgroundTransparency = 1
 
 -- LABEL
 local Label = Instance.new("TextLabel", Frame)
@@ -95,31 +186,32 @@ Label.Text = "Hitbox: "..HitboxSize
 Label.TextColor3 = Color3.new(1,1,1)
 Label.BackgroundTransparency = 1
 
--- HITBOX TOGGLE
+-- BUTTONS
 local HitboxBtn = Instance.new("TextButton", Frame)
 HitboxBtn.Size = UDim2.new(1,0,0,30)
 HitboxBtn.Position = UDim2.new(0,0,0.2,0)
 HitboxBtn.Text = "Hitbox OFF"
 
--- AIMLOCK TOGGLE
 local AimBtn = Instance.new("TextButton", Frame)
 AimBtn.Size = UDim2.new(1,0,0,30)
 AimBtn.Position = UDim2.new(0,0,0.4,0)
 AimBtn.Text = "Aimlock OFF"
 
--- SIZE +
+local ESPBtn = Instance.new("TextButton", Frame)
+ESPBtn.Size = UDim2.new(1,0,0,30)
+ESPBtn.Position = UDim2.new(0,0,0.6,0)
+ESPBtn.Text = "ESP OFF"
+
 local Plus = Instance.new("TextButton", Frame)
 Plus.Size = UDim2.new(0.5,0,0,30)
-Plus.Position = UDim2.new(0,0,0.7,0)
+Plus.Position = UDim2.new(0,0,0.8,0)
 Plus.Text = "+"
 
--- SIZE -
 local Minus = Instance.new("TextButton", Frame)
 Minus.Size = UDim2.new(0.5,0,0,30)
-Minus.Position = UDim2.new(0.5,0,0.7,0)
+Minus.Position = UDim2.new(0.5,0,0.8,0)
 Minus.Text = "-"
 
--- HIDE
 local Hide = Instance.new("TextButton", Frame)
 Hide.Size = UDim2.new(0,30,0,30)
 Hide.Position = UDim2.new(1,-30,0,0)
@@ -129,12 +221,30 @@ Hide.Text = "-"
 HitboxBtn.MouseButton1Click:Connect(function()
     HitboxEnabled = not HitboxEnabled
     HitboxBtn.Text = HitboxEnabled and "Hitbox ON" or "Hitbox OFF"
-    if not HitboxEnabled then resetHitbox() end
+    if not HitboxEnabled then resetAll() end
 end)
 
 AimBtn.MouseButton1Click:Connect(function()
     AimlockEnabled = not AimlockEnabled
     AimBtn.Text = AimlockEnabled and "Aimlock ON" or "Aimlock OFF"
+end)
+
+ESPBtn.MouseButton1Click:Connect(function()
+    ESPEnabled = not ESPEnabled
+    ESPBtn.Text = ESPEnabled and "ESP ON" or "ESP OFF"
+
+    if not ESPEnabled then
+        for _, v in pairs(ESPs) do
+            if v then v:Destroy() end
+        end
+        ESPs = {}
+    else
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LP then
+                createESP(v)
+            end
+        end
+    end
 end)
 
 Plus.MouseButton1Click:Connect(function()
