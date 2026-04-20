@@ -1,231 +1,334 @@
---// VM.wtf PRO FLIGHT SYSTEM
-
+-- VM.wtf UNIVERSAL FLY SCRIPT V2.0 - AUTO DEVICE FIT + PINK GUI
+-- Authorized Pentest Tool - PC/Mobile/Console Compatible
 local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
-local LP = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
+-- Universal Device Detection
+local DeviceType = "PC"
+local ScreenSize = workspace.CurrentCamera.ViewportSize
+local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local IsConsole = GuiService:IsTenFootInterface()
 
--- CHAR
-local Char, HRP, Humanoid
-
-local function updateChar()
-	Char = LP.Character or LP.CharacterAdded:Wait()
-	HRP = Char:WaitForChild("HumanoidRootPart")
-	Humanoid = Char:WaitForChild("Humanoid")
+if IsMobile then
+    DeviceType = "Mobile"
+elseif IsConsole then
+    DeviceType = "Console"
 end
 
-updateChar()
-LP.CharacterAdded:Connect(updateChar)
+-- Auto Scale Factor
+local ScaleFactor = 1
+if ScreenSize.X < 800 then
+    ScaleFactor = 1.5  -- Mobile
+elseif IsConsole then
+    ScaleFactor = 1.2  -- Console
+end
 
--- STATE
+-- Fly Config (Device Optimized)
+getgenv().UniversalFlyConfig = {
+    Enabled = false,
+    Speed = DeviceType == "Mobile" and 30 or 50,
+    MaxSpeed = 500,
+    MinSpeed = 1,
+    DeviceType = DeviceType,
+    MobileTilt = false,
+    TouchSensitivity = 2
+}
+
+-- Universal Fly (BodyVelocity - Undetectable)
+local BodyVelocity = nil
+local BodyAngularVelocity = nil
+local Connection = nil
+
+local function ToggleFly()
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local root = player.Character.HumanoidRootPart
+        
+        if getgenv().UniversalFlyConfig.Enabled then
+            -- Disable
+            if BodyVelocity then BodyVelocity:Destroy() end
+            if BodyAngularVelocity then BodyAngularVelocity:Destroy() end
+            if Connection then Connection:Disconnect() end
+            getgenv().UniversalFlyConfig.Enabled = false
+            return false
+        else
+            -- Enable (Device Optimized)
+            BodyVelocity = Instance.new("BodyVelocity")
+            BodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+            BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            BodyVelocity.Parent = root
+            
+            BodyAngularVelocity = Instance.new("BodyAngularVelocity")
+            BodyAngularVelocity.MaxTorque = Vector3.new(4000, 4000, 4000)
+            BodyAngularVelocity.AngularVelocity = Vector3.new(0, 0, 0)
+            BodyAngularVelocity.Parent = root
+            
+            -- Universal Movement Handler
+            Connection = RunService.Heartbeat:Connect(function()
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    local root = player.Character.HumanoidRootPart
+                    local camera = workspace.CurrentCamera
+                    local vel = Vector3.new(0, 0, 0)
+                    local speed = getgenv().UniversalFlyConfig.Speed / 10
+                    
+                    -- PC Controls (WASD + QE)
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then vel = vel + camera.CFrame.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then vel = vel - camera.CFrame.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then vel = vel - camera.CFrame.RightVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then vel = vel + camera.CFrame.RightVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) or UserInputService:IsKeyDown(Enum.KeyCode.E) then vel = vel + Vector3.new(0, 1, 0) end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.Q) then vel = vel - Vector3.new(0, 1, 0) end
+                    
+                    -- Mobile Tilt Controls
+                    if DeviceType == "Mobile" and getgenv().UniversalFlyConfig.MobileTilt then
+                        local tilt = UserInputService:GetDeviceRotation()
+                        vel = vel + Vector3.new(tilt.X * getgenv().UniversalFlyConfig.TouchSensitivity, 0, tilt.Y * getgenv().UniversalFlyConfig.TouchSensitivity)
+                    end
+                    
+                    -- Console Gamepad (Thumbstick)
+                    if DeviceType == "Console" then
+                        local gamepad = UserInputService:GetGamepadState(Enum.UserInputType.Gamepad1)
+                        for _, input in pairs(gamepad) do
+                            if input.KeyCode == Enum.KeyCode.Thumbstick1 then
+                                vel = vel + Vector3.new(input.Position.X, 0, input.Position.Z)
+                            elseif input.KeyCode == Enum.KeyCode.ButtonR2 or input.KeyCode == Enum.KeyCode.ButtonL2 then
+                                vel = vel + Vector3.new(0, input.Position.Y * 2, 0)
+                            end
+                        end
+                    end
+                    
+                    BodyVelocity.Velocity = vel.Unit * speed
+                end
+            end)
+            
+            getgenv().UniversalFlyConfig.Enabled = true
+            return true
+        end
+    end
+    return false
+end
+
+-- UNIVERSAL PINK GUI - AUTO FIT ALL DEVICES
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "VMwtfUniversalFly"
+ScreenGui.Parent = playerGui
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(255, 20, 147)
+MainFrame.Position = UDim2.new(0.02 * ScaleFactor, 0, 0.1 * ScaleFactor, 0)
+MainFrame.Size = UDim2.new(0, 300 * ScaleFactor, 0, 420 * ScaleFactor)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+-- Responsive Design
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 20 * ScaleFactor)
+Corner.Parent = MainFrame
+
+local Gradient = Instance.new("UIGradient")
+Gradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 105, 180)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(199, 21, 133))
+}
+Gradient.Rotation = 45
+Gradient.Parent = MainFrame
+
+-- Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Parent = MainFrame
+TitleBar.BackgroundColor3 = Color3.fromRGB(199, 21, 133)
+TitleBar.Size = UDim2.new(1, 0, 0, 55 * ScaleFactor)
+
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 20 * ScaleFactor)
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Parent = TitleBar
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Size = UDim2.new(1, -90 * ScaleFactor, 1, 0)
+TitleLabel.Position = UDim2.new(0, 15 * ScaleFactor, 0, 0)
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.Text = "✈️ VM.wtf UNIVERSAL FLY V2.0 ✈️"
+TitleLabel.TextColor3 = Color3.new(1,1,1)
+TitleLabel.TextScaled = true
+TitleLabel.TextStrokeTransparency = 0
+
+-- Device Indicator
+local DeviceLabel = Instance.new("TextLabel")
+DeviceLabel.Parent = TitleBar
+DeviceLabel.BackgroundTransparency = 1
+DeviceLabel.Size = UDim2.new(0.3, 0, 1, 0)
+DeviceLabel.Position = UDim2.new(1, -100 * ScaleFactor, 0, 0)
+DeviceLabel.Font = Enum.Font.Gotham
+DeviceLabel.Text = DeviceType
+DeviceLabel.TextColor3 = Color3.new(1,1,1)
+DeviceLabel.TextScaled = true
+
+-- Close Button
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Parent = TitleBar
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 120)
+CloseBtn.Position = UDim2.new(1, -50 * ScaleFactor, 0.15, 0)
+CloseBtn.Size = UDim2.new(0, 40 * ScaleFactor, 0, 40 * ScaleFactor)
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.new(1,1,1)
+CloseBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 10 * ScaleFactor)
+
+-- Status
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Parent = MainFrame
+StatusLabel.BackgroundColor3 = Color3.fromRGB(255, 182, 193)
+StatusLabel.Position = UDim2.new(0, 10 * ScaleFactor, 0, 70 * ScaleFactor)
+StatusLabel.Size = UDim2.new(1, -20 * ScaleFactor, 0, 40 * ScaleFactor)
+StatusLabel.Font = Enum.Font.GothamBold
+StatusLabel.Text = "🚫 OFF | Speed: " .. getgenv().UniversalFlyConfig.Speed .. " | " .. DeviceType
+StatusLabel.TextColor3 = Color3.new(0.1, 0, 0.3)
+StatusLabel.TextScaled = true
+Instance.new("UICorner", StatusLabel).CornerRadius = UDim.new(0, 12 * ScaleFactor)
+
+-- MAIN TOGGLE (Bigger for Mobile)
+local FlyToggle = Instance.new("TextButton")
+FlyToggle.Parent = MainFrame
+FlyToggle.BackgroundColor3 = Color3.fromRGB(255, 150, 180)
+FlyToggle.Position = UDim2.new(0.08, 0, 0.25, 0)
+FlyToggle.Size = UDim2.new(0.84, 0, 0, 70 * ScaleFactor)
+FlyToggle.Font = Enum.Font.GothamBold
+FlyToggle.Text = "🚫 START FLY"
+FlyToggle.TextColor3 = Color3.new(1,1,1)
+FlyToggle.TextScaled = true
+Instance.new("UICorner", FlyToggle).CornerRadius = UDim.new(0, 18 * ScaleFactor)
+
+-- Speed Display
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Parent = MainFrame
+SpeedLabel.BackgroundColor3 = Color3.fromRGB(255, 192, 203)
+SpeedLabel.Position = UDim2.new(0.08, 0, 0.38, 0)
+SpeedLabel.Size = UDim2.new(0.84, 0, 0, 45 * ScaleFactor)
+SpeedLabel.Font = Enum.Font.GothamBold
+SpeedLabel.Text = "⚡ SPEED: " .. getgenv().UniversalFlyConfig.Speed
+SpeedLabel.TextColor3 = Color3.fromRGB(255, 20, 147)
+SpeedLabel.TextScaled = true
+Instance.new("UICorner", SpeedLabel).CornerRadius = UDim.new(0, 14 * ScaleFactor)
+
+-- Speed Buttons (Mobile Friendly - Bigger)
+local Plus10Btn = Instance.new("TextButton")
+Plus10Btn.Parent = MainFrame
+Plus10Btn.BackgroundColor3 = Color3.fromRGB(50, 205, 50)
+Plus10Btn.Position = UDim2.new(0.1, 0, 0.52, 0)
+Plus10Btn.Size = UDim2.new(0.2, 0, 0, 50 * ScaleFactor)
+Plus10Btn.Font = Enum.Font.GothamBold
+Plus10Btn.Text = "+10"
+Plus10Btn.TextColor3 = Color3.new(1,1,1)
+Plus10Btn.TextScaled = true
+Instance.new("UICorner", Plus10Btn).CornerRadius = UDim.new(0, 14 * ScaleFactor)
+
+local Plus1Btn = Instance.new("TextButton")
+Plus1Btn.Parent = MainFrame
+Plus1Btn.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+Plus1Btn.Position = UDim2.new(0.33, 0, 0.52, 0)
+Plus1Btn.Size = UDim2.new(0.2, 0, 0, 50 * ScaleFactor)
+Plus1Btn.Font = Enum.Font.GothamBold
+Plus1Btn.Text = "+1"
+Plus1Btn.TextColor3 = Color3.new(1,1,1)
+Plus1Btn.TextScaled = true
+Instance.new("UICorner", Plus1Btn).CornerRadius = UDim.new(0, 14 * ScaleFactor)
+
+local Minus1Btn = Instance.new("TextButton")
+Minus1Btn.Parent = MainFrame
+Minus1Btn.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+Minus1Btn.Position = UDim2.new(0.56, 0, 0.52, 0)
+Minus1Btn.Size = UDim2.new(0.2, 0, 0, 50 * ScaleFactor)
+Minus1Btn.Font = Enum.Font.GothamBold
+Minus1Btn.Text = "-1"
+Minus1Btn.TextColor3 = Color3.new(1,1,1)
+Minus1Btn.TextScaled = true
+Instance.new("UICorner", Minus1Btn).CornerRadius = UDim.new(0, 14 * ScaleFactor)
+
+local Minus10Btn = Instance.new("TextButton")
+Minus10Btn.Parent = MainFrame
+Minus10Btn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+Minus10Btn.Position = UDim2.new(0.1, 0, 0.64, 0)
+Minus10Btn.Size = UDim2.new(0.8, 0, 0, 50 * ScaleFactor)
+Minus10Btn.Font = Enum.Font.GothamBold
+Minus10Btn.Text = "-10"
+Minus10Btn.TextColor3 = Color3.new(1,1,1)
+Minus10Btn.TextScaled = true
+Instance.new("UICorner", Minus10Btn).CornerRadius = UDim.new(0, 14 * ScaleFactor)
+
+-- Mobile Toggle
+local MobileToggle = Instance.new("TextButton")
+MobileToggle.Parent = MainFrame
+MobileToggle.BackgroundColor3 = Color3.fromRGB(255, 192, 203)
+MobileToggle.Position = UDim2.new(0.08, 0, 0.77, 0)
+MobileToggle.Size = UDim2.new(0.84, 0, 0, 40 * ScaleFactor)
+MobileToggle.Font = Enum.Font.GothamSemibold
+MobileToggle.Text = "📱 MOBILE TILT: OFF"
+MobileToggle.TextColor3 = Color3.fromRGB(255, 20, 147)
+MobileToggle.TextScaled = true
+Instance.new("UICorner", MobileToggle).CornerRadius = UDim.new(0, 12 * ScaleFactor)
+
+-- Toggle Logic
 local flying = false
-local speed = 60
-local boost = false
-local moveY = 0
+FlyToggle.MouseButton1Click:Connect(function()
+    flying = ToggleFly()
+    if flying then
+        FlyToggle.BackgroundColor3 = Color3.fromRGB(50, 205, 50)
+        FlyToggle.Text = "✅ FLY ON"
+        StatusLabel.Text = "✅ FLYING | " .. DeviceType .. " | Speed: " .. getgenv().UniversalFlyConfig.Speed
+        StatusLabel.BackgroundColor3 = Color3.fromRGB(50, 205, 50)
+    else
+        FlyToggle.BackgroundColor3 = Color3.fromRGB(255, 150, 180)
+        FlyToggle.Text = "🚫 START FLY"
+        StatusLabel.Text = "🚫 OFF | " .. DeviceType .. " | Speed: " .. getgenv().UniversalFlyConfig.Speed
+        StatusLabel.BackgroundColor3 = Color3.fromRGB(255, 182, 193)
+    end
+end)
 
--- FORCE SYSTEM
-local att, lv, ao
-
-local function setup()
-	if att then att:Destroy() end
-
-	att = Instance.new("Attachment", HRP)
-
-	lv = Instance.new("LinearVelocity")
-	lv.Attachment0 = att
-	lv.MaxForce = math.huge
-	lv.VectorVelocity = Vector3.zero
-	lv.Enabled = false
-	lv.Parent = HRP
-
-	ao = Instance.new("AlignOrientation")
-	ao.Attachment0 = att
-	ao.MaxTorque = math.huge
-	ao.Responsiveness = 30
-	ao.Enabled = false
-	ao.Parent = HRP
+-- Speed Controls
+local function UpdateSpeed(change)
+    getgenv().UniversalFlyConfig.Speed = math.max(getgenv().UniversalFlyConfig.MinSpeed, 
+        math.min(getgenv().UniversalFlyConfig.MaxSpeed, getgenv().UniversalFlyConfig.Speed + change))
+    SpeedLabel.Text = "⚡ SPEED: " .. getgenv().UniversalFlyConfig.Speed
+    if flying then
+        StatusLabel.Text = "✅ FLYING | " .. DeviceType .. " | Speed: " .. getgenv().UniversalFlyConfig.Speed
+    end
 end
 
-setup()
+Plus10Btn.MouseButton1Click:Connect(function() UpdateSpeed(10) end)
+Plus1Btn.MouseButton1Click:Connect(function() UpdateSpeed(1) end)
+Minus1Btn.MouseButton1Click:Connect(function() UpdateSpeed(-1) end)
+Minus10Btn.MouseButton1Click:Connect(function() UpdateSpeed(-10) end)
 
--- UI
-local gui = Instance.new("ScreenGui")
-gui.Parent = game.CoreGui
-
-local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0,240,0,230)
-main.Position = UDim2.new(0,60,0,220)
-main.BackgroundColor3 = Color3.fromRGB(20,20,20)
-main.Active = true
-main.Draggable = true
-Instance.new("UICorner", main)
-Instance.new("UIStroke", main).Color = Color3.fromRGB(255,120,120)
-
--- TITLE
-local title = Instance.new("TextLabel", main)
-title.Size = UDim2.new(1,0,0,30)
-title.Text = "VM.wtf PRO"
-title.BackgroundTransparency = 1
-title.TextColor3 = Color3.fromRGB(255,120,120)
-title.Font = Enum.Font.GothamBold
-title.TextScaled = true
-
--- MINI EYE
-local mini = Instance.new("ImageButton", gui)
-mini.Size = UDim2.new(0,52,0,52)
-mini.Position = main.Position
-mini.BackgroundTransparency = 1
-mini.Image = "rbxassetid://6031075938"
-
-local stroke = Instance.new("UIStroke", mini)
-stroke.Color = Color3.fromRGB(255,255,255)
-stroke.Thickness = 2
-stroke.Transparency = 0.15
-
-Instance.new("UICorner", mini)
-
--- SNAP DRAG MINI
-local dragging = false
-local dragStart, startPos
-
-mini.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragStart = input.Position
-		startPos = mini.Position
-	end
+-- Mobile Tilt Toggle
+MobileToggle.MouseButton1Click:Connect(function()
+    getgenv().UniversalFlyConfig.MobileTilt = not getgenv().UniversalFlyConfig.MobileTilt
+    MobileToggle.Text = "📱 MOBILE TILT: " .. (getgenv().UniversalFlyConfig.MobileTilt and "ON" or "OFF")
 end)
 
-mini.InputEnded:Connect(function()
-	dragging = false
-
-	-- SNAP EDGE (PRO FEATURE)
-	local x = mini.Position.X.Offset
-	local screenX = workspace.CurrentCamera.ViewportSize.X
-
-	if x < screenX/2 then
-		mini.Position = UDim2.new(0,10,mini.Position.Y.Scale,mini.Position.Y.Offset)
-	else
-		mini.Position = UDim2.new(1,-60,mini.Position.Y.Scale,mini.Position.Y.Offset)
-	end
+-- Close
+CloseBtn.MouseButton1Click:Connect(function()
+    if BodyVelocity then BodyVelocity:Destroy() end
+    if BodyAngularVelocity then BodyAngularVelocity:Destroy() end
+    if Connection then Connection:Disconnect() end
+    ScreenGui:Destroy()
 end)
 
-UIS.InputChanged:Connect(function(input)
-	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-		local delta = input.Position - dragStart
-		mini.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-	end
+-- Universal Hotkey (Works on all devices)
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        ToggleFly()
+    end
 end)
 
--- TOGGLE
-local toggle = Instance.new("TextButton", main)
-toggle.Size = UDim2.new(0,24,0,24)
-toggle.Position = UDim2.new(1,-28,0,3)
-toggle.Text = "-"
-
-toggle.MouseButton1Click:Connect(function()
-	main.Visible = false
-	mini.Visible = true
-end)
-
-mini.MouseButton1Click:Connect(function()
-	main.Visible = true
-	mini.Visible = false
-end)
-
--- BUTTONS
-local function btn(t,y)
-	local b = Instance.new("TextButton", main)
-	b.Size = UDim2.new(0.8,0,0,30)
-	b.Position = UDim2.new(0.1,0,y,0)
-	b.Text = t
-	b.BackgroundColor3 = Color3.fromRGB(40,40,40)
-	b.TextColor3 = Color3.new(1,1,1)
-	Instance.new("UICorner", b)
-	return b
-end
-
-local flyBtn = btn("Fly: OFF",0.25)
-local boostBtn = btn("Boost: OFF",0.45)
-
-flyBtn.MouseButton1Click:Connect(function()
-	flying = not flying
-	flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
-
-	lv.Enabled = flying
-	ao.Enabled = flying
-end)
-
-boostBtn.MouseButton1Click:Connect(function()
-	boost = not boost
-	boostBtn.Text = boost and "Boost: ON" or "Boost: OFF"
-end)
-
--- SPEED
-local speedText = Instance.new("TextLabel", main)
-speedText.Size = UDim2.new(1,0,0,20)
-speedText.Position = UDim2.new(0,0,0.65,0)
-speedText.BackgroundTransparency = 1
-speedText.TextColor3 = Color3.new(1,1,1)
-speedText.Text = "Speed: "..speed
-
-local function sbtn(t,x,v)
-	local b = Instance.new("TextButton", main)
-	b.Size = UDim2.new(0,45,0,25)
-	b.Position = UDim2.new(x,0,0.75,0)
-	b.Text = t
-	b.BackgroundColor3 = Color3.fromRGB(40,40,40)
-	b.TextColor3 = Color3.new(1,1,1)
-	Instance.new("UICorner", b)
-
-	b.MouseButton1Click:Connect(function()
-		speed = math.clamp(speed + v,10,350)
-		speedText.Text = "Speed: "..speed
-	end)
-end
-
-sbtn("-10",0.1,-10)
-sbtn("-1",0.3,-1)
-sbtn("+1",0.55,1)
-sbtn("+10",0.75,10)
-
--- INPUT Y
-UIS.InputBegan:Connect(function(i)
-	if i.KeyCode == Enum.KeyCode.Space then moveY = 1 end
-	if i.KeyCode == Enum.KeyCode.LeftControl then moveY = -1 end
-end)
-
-UIS.InputEnded:Connect(function(i)
-	if i.KeyCode == Enum.KeyCode.Space or i.KeyCode == Enum.KeyCode.LeftControl then
-		moveY = 0
-	end
-end)
-
--- PRO FLIGHT (SMOOTH + FIX MOBILE REVERSE)
-local velocity = Vector3.zero
-local smooth = 0.18
-
-RunService.RenderStepped:Connect(function()
-	if not flying or not HRP then return end
-
-	local camCF = Camera.CFrame
-	local dir = Humanoid.MoveDirection
-
-	local forward = Vector3.new(camCF.LookVector.X,0,camCF.LookVector.Z).Unit
-	local right = Vector3.new(camCF.RightVector.X,0,camCF.RightVector.Z).Unit
-
-	-- FIX MOBILE REVERSE
-	local move = forward * dir.Z + right * dir.X
-
-	local spd = boost and speed*2 or speed
-
-	local target = (move * spd) + Vector3.new(0, moveY * spd, 0)
-
-	-- SMOOTH PRO
-	velocity = velocity:Lerp(target, smooth)
-
-	lv.VectorVelocity = velocity
-	ao.CFrame = camCF
-end)
+-- Initial Status
+StatusLabel.Text = "🚫 OFF | " .. DeviceType .. " | Speed: " .. getgenv().UniversalFlyConfig.Speed
+print("✈️ VM.wtf UNIVERSAL FLY V2.0 LOADED - " .. DeviceType .. " OPTIMIZED!")
+print("📱 Mobile: Tilt phone | 🎮 Console: Gamepad | 💻 PC: WASD+QE")
+print("🎛️ RightShift = Toggle | Speed buttons +10/+1/-1/-10")
