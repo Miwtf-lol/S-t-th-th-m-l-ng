@@ -1,0 +1,77 @@
+--// HITBOX + AUTO HIT + ANTI DETECT (mi.wtf)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+local LP = Players.LocalPlayer
+local Mouse = LP:GetMouse()
+
+-- SETTINGS
+local Enabled = false
+local AutoHit = true
+local HitboxSize = 5
+
+-- SAFE LIMIT
+local MAX_SIZE = 10 -- đừng để quá cao dễ bị detect
+
+-- HITBOX LOOP
+RunService.RenderStepped:Connect(function()
+    if Enabled then
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LP and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = v.Character.HumanoidRootPart
+
+                hrp.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
+                hrp.Transparency = 0.7
+                hrp.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- AUTO HIT (CÓ DELAY RANDOM)
+UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if AutoHit and Mouse.Target then
+            local target = Mouse.Target.Parent
+
+            if target and target:FindFirstChild("Humanoid") then
+                local hum = target.Humanoid
+
+                -- random delay tránh detect
+                local hits = math.random(2,4)
+                for i = 1, hits do
+                    hum:TakeDamage(15)
+                    task.wait(math.random(5,15)/100) -- delay 0.05 - 0.15
+                end
+            end
+        end
+    end
+end)
+
+-- LIMIT SIZE
+local function setSize(v)
+    HitboxSize = math.clamp(v, 1, MAX_SIZE)
+end
+
+-- RESET WHEN OFF
+local function resetHitbox()
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LP and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = v.Character.HumanoidRootPart
+            hrp.Size = Vector3.new(2,2,1)
+            hrp.Transparency = 0
+        end
+    end
+end
+
+-- TOGGLE FUNCTION
+function ToggleHitbox(state)
+    Enabled = state
+    if not state then
+        resetHitbox()
+    end
+end
