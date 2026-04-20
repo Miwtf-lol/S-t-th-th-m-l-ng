@@ -1,27 +1,58 @@
---// HITBOX + AUTO HIT + ANTI DETECT (mi.wtf)
+--// MI.WTF FULL FIX (HITBOX + AIMLOCK + MINI UI)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 
 local LP = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 local Mouse = LP:GetMouse()
 
 -- SETTINGS
-local Enabled = false
-local AutoHit = true
+local HitboxEnabled = false
+local AimlockEnabled = false
 local HitboxSize = 5
+local MAX_SIZE = 10
 
--- SAFE LIMIT
-local MAX_SIZE = 10 -- đừng để quá cao dễ bị detect
+-- TARGET
+local Target = nil
 
--- HITBOX LOOP
+-- FIND TARGET GẦN NHẤT
+local function getClosest()
+    local closest = nil
+    local dist = math.huge
+
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LP and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            local pos, visible = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+            if visible then
+                local mag = (Vector2.new(pos.X, pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+                if mag < dist then
+                    dist = mag
+                    closest = v
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- AIMLOCK
 RunService.RenderStepped:Connect(function()
-    if Enabled then
+    if AimlockEnabled then
+        Target = getClosest()
+        if Target and Target.Character and Target.Character:FindFirstChild("HumanoidRootPart") then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, Target.Character.HumanoidRootPart.Position)
+        end
+    end
+end)
+
+-- HITBOX (CLIENT VISUAL + AIM SUPPORT)
+RunService.RenderStepped:Connect(function()
+    if HitboxEnabled then
         for _, v in pairs(Players:GetPlayers()) do
             if v ~= LP and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
                 local hrp = v.Character.HumanoidRootPart
-
                 hrp.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
                 hrp.Transparency = 0.7
                 hrp.CanCollide = false
@@ -30,34 +61,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- AUTO HIT (CÓ DELAY RANDOM)
-UIS.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if AutoHit and Mouse.Target then
-            local target = Mouse.Target.Parent
-
-            if target and target:FindFirstChild("Humanoid") then
-                local hum = target.Humanoid
-
-                -- random delay tránh detect
-                local hits = math.random(2,4)
-                for i = 1, hits do
-                    hum:TakeDamage(15)
-                    task.wait(math.random(5,15)/100) -- delay 0.05 - 0.15
-                end
-            end
-        end
-    end
-end)
-
--- LIMIT SIZE
-local function setSize(v)
-    HitboxSize = math.clamp(v, 1, MAX_SIZE)
-end
-
--- RESET WHEN OFF
+-- RESET
 local function resetHitbox()
     for _, v in pairs(Players:GetPlayers()) do
         if v ~= LP and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
@@ -68,10 +72,87 @@ local function resetHitbox()
     end
 end
 
--- TOGGLE FUNCTION
-function ToggleHitbox(state)
-    Enabled = state
-    if not state then
-        resetHitbox()
-    end
-end
+-- GUI
+local gui = Instance.new("ScreenGui", game.CoreGui)
+
+local Frame = Instance.new("Frame", gui)
+Frame.Size = UDim2.new(0,200,0,180)
+Frame.Position = UDim2.new(0.1,0,0.3,0)
+Frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+Frame.Active = true
+Frame.Draggable = true
+
+local OpenBtn = Instance.new("TextButton", gui)
+OpenBtn.Size = UDim2.new(0,50,0,50)
+OpenBtn.Position = UDim2.new(0,10,0.5,0)
+OpenBtn.Text = "UI"
+OpenBtn.Visible = false
+
+-- LABEL
+local Label = Instance.new("TextLabel", Frame)
+Label.Size = UDim2.new(1,0,0,30)
+Label.Text = "Hitbox: "..HitboxSize
+Label.TextColor3 = Color3.new(1,1,1)
+Label.BackgroundTransparency = 1
+
+-- HITBOX TOGGLE
+local HitboxBtn = Instance.new("TextButton", Frame)
+HitboxBtn.Size = UDim2.new(1,0,0,30)
+HitboxBtn.Position = UDim2.new(0,0,0.2,0)
+HitboxBtn.Text = "Hitbox OFF"
+
+-- AIMLOCK TOGGLE
+local AimBtn = Instance.new("TextButton", Frame)
+AimBtn.Size = UDim2.new(1,0,0,30)
+AimBtn.Position = UDim2.new(0,0,0.4,0)
+AimBtn.Text = "Aimlock OFF"
+
+-- SIZE +
+local Plus = Instance.new("TextButton", Frame)
+Plus.Size = UDim2.new(0.5,0,0,30)
+Plus.Position = UDim2.new(0,0,0.7,0)
+Plus.Text = "+"
+
+-- SIZE -
+local Minus = Instance.new("TextButton", Frame)
+Minus.Size = UDim2.new(0.5,0,0,30)
+Minus.Position = UDim2.new(0.5,0,0.7,0)
+Minus.Text = "-"
+
+-- HIDE
+local Hide = Instance.new("TextButton", Frame)
+Hide.Size = UDim2.new(0,30,0,30)
+Hide.Position = UDim2.new(1,-30,0,0)
+Hide.Text = "-"
+
+-- EVENTS
+HitboxBtn.MouseButton1Click:Connect(function()
+    HitboxEnabled = not HitboxEnabled
+    HitboxBtn.Text = HitboxEnabled and "Hitbox ON" or "Hitbox OFF"
+    if not HitboxEnabled then resetHitbox() end
+end)
+
+AimBtn.MouseButton1Click:Connect(function()
+    AimlockEnabled = not AimlockEnabled
+    AimBtn.Text = AimlockEnabled and "Aimlock ON" or "Aimlock OFF"
+end)
+
+Plus.MouseButton1Click:Connect(function()
+    HitboxSize = math.clamp(HitboxSize + 1, 1, MAX_SIZE)
+    Label.Text = "Hitbox: "..HitboxSize
+end)
+
+Minus.MouseButton1Click:Connect(function()
+    HitboxSize = math.clamp(HitboxSize - 1, 1, MAX_SIZE)
+    Label.Text = "Hitbox: "..HitboxSize
+end)
+
+Hide.MouseButton1Click:Connect(function()
+    Frame.Visible = false
+    OpenBtn.Visible = true
+end)
+
+OpenBtn.MouseButton1Click:Connect(function()
+    Frame.Visible = true
+    OpenBtn.Visible = false
+end)
