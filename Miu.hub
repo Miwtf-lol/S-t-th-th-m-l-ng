@@ -1,0 +1,568 @@
+local MarketplaceService = game:GetService("MarketplaceService")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+
+local autoBuyLoops = {}
+local purchaseCounts = {}
+local productFramesMap = {}
+local activeButtonResets = setmetatable({}, { __mode = "k" })
+
+local DARK_BG = Color3.fromRGB(30, 30, 30)
+local DARK_BG_LIGHTER = Color3.fromRGB(45, 45, 45)
+local ACCENT = Color3.fromRGB(200, 50, 50)
+local ACCENT_HOVER = Color3.fromRGB(220, 70, 70)
+local TEXT_COLOR = Color3.fromRGB(240, 240, 240)
+local TEXT_SECONDARY = Color3.fromRGB(180, 180, 180)
+local BUTTON_BG = Color3.fromRGB(60, 60, 60)
+local BUTTON_HOVER = Color3.fromRGB(80, 80, 80)
+local SUCCESS_COLOR = Color3.fromRGB(50, 150, 50)
+
+local function Finished(productInfo)
+	local productId = productInfo.ProductId
+	local success, err = pcall(function()
+		MarketplaceService:SignalPromptProductPurchaseFinished(localPlayer.UserId, productId, true)
+	end)
+	if not success then
+		pcall(function()
+			MarketplaceService:PromptProductPurchaseFinished(localPlayer, productId)
+		end)
+	end
+	purchaseCounts[productId] = (purchaseCounts[productId] or 0) + 1
+	local frame = productFramesMap[productId]
+	if frame and frame.Parent then
+		local countLabel = frame:FindFirstChild("PurchaseCountLabel")
+		if countLabel then
+			countLabel.Text = "Total Purchases: " .. purchaseCounts[productId]
+		end
+	end
+end
+
+local mainGui = Instance.new("ScreenGui")
+mainGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+mainGui.Parent = CoreGui
+
+local tooltipFrame = Instance.new("Frame")
+tooltipFrame.Name = "DescriptionTooltip"
+tooltipFrame.BackgroundColor3 = DARK_BG
+tooltipFrame.BackgroundTransparency = 0.15
+tooltipFrame.BorderSizePixel = 0
+tooltipFrame.Size = UDim2.new(0, 220, 0, 50)
+tooltipFrame.Visible = false
+tooltipFrame.ZIndex = 10
+tooltipFrame.Parent = mainGui
+Instance.new("UICorner", tooltipFrame).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", tooltipFrame).Color = Color3.fromRGB(80, 80, 80)
+local tooltipPadding = Instance.new("UIPadding", tooltipFrame)
+tooltipPadding.PaddingTop = UDim.new(0, 6)
+tooltipPadding.PaddingBottom = UDim.new(0, 6)
+tooltipPadding.PaddingLeft = UDim.new(0, 8)
+tooltipPadding.PaddingRight = UDim.new(0, 8)
+local tooltipLabel = Instance.new("TextLabel", tooltipFrame)
+tooltipLabel.Name = "TooltipLabel"
+tooltipLabel.Font = Enum.Font.Gotham
+tooltipLabel.Text = ""
+tooltipLabel.TextColor3 = TEXT_COLOR
+tooltipLabel.TextSize = 14
+tooltipLabel.TextWrapped = true
+tooltipLabel.TextXAlignment = Enum.TextXAlignment.Left
+tooltipLabel.TextYAlignment = Enum.TextYAlignment.Top
+tooltipLabel.BackgroundTransparency = 1
+tooltipLabel.AutomaticSize = Enum.AutomaticSize.Y
+tooltipLabel.Size = UDim2.new(1, 0, 0, 0)
+
+local mainFrame = Instance.new("TextButton")
+mainFrame.Font = Enum.Font.GothamBold
+mainFrame.Text = "Miu.hub"
+mainFrame.TextColor3 = TEXT_COLOR
+mainFrame.TextSize = 16
+mainFrame.AutoButtonColor = false
+mainFrame.BackgroundColor3 = DARK_BG
+mainFrame.BackgroundTransparency = 0.15
+mainFrame.BorderSizePixel = 0
+mainFrame.Position = UDim2.new(0.35, 0, 0.3, 0)
+mainFrame.Size = UDim2.new(0, 300, 0, 36)
+mainFrame.Parent = mainGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", mainFrame).Color = Color3.fromRGB(80, 80, 80)
+
+local closeButton = Instance.new("TextButton")
+closeButton.Font = Enum.Font.GothamBold
+closeButton.Text = "X"
+closeButton.TextColor3 = TEXT_COLOR
+closeButton.TextSize = 18
+closeButton.BackgroundColor3 = ACCENT
+closeButton.BackgroundTransparency = 0.2
+closeButton.BorderSizePixel = 0
+closeButton.Position = UDim2.new(1, -34, 0, 4)
+closeButton.Size = UDim2.new(0, 28, 0, 28)
+closeButton.Parent = mainFrame
+Instance.new("UICorner", closeButton).CornerRadius = UDim.new(0, 6)
+
+local minimizeButton = Instance.new("TextButton")
+minimizeButton.Font = Enum.Font.GothamBold
+minimizeButton.Text = "âˆ’"
+minimizeButton.TextColor3 = TEXT_COLOR
+minimizeButton.TextSize = 18
+minimizeButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+minimizeButton.BackgroundTransparency = 0.2
+minimizeButton.BorderSizePixel = 0
+minimizeButton.Position = UDim2.new(1, -66, 0, 4)
+minimizeButton.Size = UDim2.new(0, 28, 0, 28)
+minimizeButton.Parent = mainFrame
+Instance.new("UICorner", minimizeButton).CornerRadius = UDim.new(0, 6)
+
+local refreshButton = Instance.new("TextButton")
+refreshButton.Font = Enum.Font.GothamBold
+refreshButton.Text = "R"
+refreshButton.TextColor3 = TEXT_COLOR
+refreshButton.TextSize = 18
+refreshButton.BackgroundColor3 = Color3.fromRGB(70, 130, 200)
+refreshButton.BackgroundTransparency = 0.2
+refreshButton.BorderSizePixel = 0
+refreshButton.Position = UDim2.new(1, -98, 0, 4)
+refreshButton.Size = UDim2.new(0, 28, 0, 28)
+refreshButton.Parent = mainFrame
+Instance.new("UICorner", refreshButton).CornerRadius = UDim.new(0, 6)
+
+local searchBox = Instance.new("TextBox")
+searchBox.Name = "SearchBox"
+searchBox.Font = Enum.Font.Gotham
+searchBox.Text = ""
+searchBox.PlaceholderText = "đŸ” Search by name..."
+searchBox.PlaceholderColor3 = Color3.fromRGB(160, 160, 160)
+searchBox.TextColor3 = TEXT_COLOR
+searchBox.TextSize = 14
+searchBox.BackgroundColor3 = DARK_BG_LIGHTER
+searchBox.BackgroundTransparency = 0.15
+searchBox.Position = UDim2.new(0, 0, 1, 4)
+searchBox.Size = UDim2.new(1, 0, 0, 32)
+searchBox.Parent = mainFrame
+Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", searchBox).Color = Color3.fromRGB(80, 80, 80)
+
+local contentContainer = Instance.new("Frame")
+contentContainer.BackgroundColor3 = DARK_BG
+contentContainer.BackgroundTransparency = 0.15
+contentContainer.BorderSizePixel = 0
+contentContainer.Position = UDim2.new(0, 0, 1, 40)
+contentContainer.Size = UDim2.new(0, 300, 0, 476)
+contentContainer.Parent = mainFrame
+Instance.new("UICorner", contentContainer).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", contentContainer).Color = Color3.fromRGB(80, 80, 80)
+
+local productsScrolling = Instance.new("ScrollingFrame")
+productsScrolling.Name = "ProductsScrolling"
+productsScrolling.AutomaticCanvasSize = Enum.AutomaticSize.Y
+productsScrolling.ScrollBarThickness = 5
+productsScrolling.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+productsScrolling.Active = true
+productsScrolling.BackgroundTransparency = 1
+productsScrolling.BorderSizePixel = 0
+productsScrolling.Size = UDim2.new(1, 0, 1, 0)
+productsScrolling.Parent = contentContainer
+Instance.new("UIListLayout", productsScrolling).SortOrder = Enum.SortOrder.LayoutOrder
+
+local exampleProductFrame = Instance.new("Frame")
+exampleProductFrame.BackgroundTransparency = 1
+exampleProductFrame.BorderSizePixel = 0
+exampleProductFrame.Size = UDim2.new(1, 0, 0, 120)
+exampleProductFrame.Visible = false
+exampleProductFrame.Name = "ExampleFrame"
+exampleProductFrame.Parent = productsScrolling
+
+local hoverBg = Instance.new("Frame", exampleProductFrame)
+hoverBg.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+hoverBg.BackgroundTransparency = 1
+hoverBg.BorderSizePixel = 0
+hoverBg.Size = UDim2.new(1, 0, 1, 0)
+hoverBg.Name = "HoverBg"
+Instance.new("UICorner", hoverBg).CornerRadius = UDim.new(0, 6)
+
+local nameLabel = Instance.new("TextLabel", exampleProductFrame)
+nameLabel.Name = "NameLabel"
+nameLabel.Font = Enum.Font.Gotham
+nameLabel.Text = "Product Name:"
+nameLabel.TextColor3 = TEXT_COLOR
+nameLabel.TextSize = 14
+nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+nameLabel.BackgroundTransparency = 1
+nameLabel.Position = UDim2.new(0.05, 0, 0.1, 0)
+nameLabel.Size = UDim2.new(0.6, 0, 0, 18)
+
+local idLabel = Instance.new("TextLabel", exampleProductFrame)
+idLabel.Name = "IDLabel"
+idLabel.Font = Enum.Font.Gotham
+idLabel.Text = "Product ID:"
+idLabel.TextColor3 = TEXT_COLOR
+idLabel.TextSize = 14
+idLabel.TextXAlignment = Enum.TextXAlignment.Left
+idLabel.BackgroundTransparency = 1
+idLabel.Position = UDim2.new(0.05, 0, 0.3, 0)
+idLabel.Size = UDim2.new(0.6, 0, 0, 18)
+
+local priceLabel = Instance.new("TextLabel", exampleProductFrame)
+priceLabel.Name = "PriceLabel"
+priceLabel.Font = Enum.Font.Gotham
+priceLabel.Text = "Product Price:"
+priceLabel.TextColor3 = TEXT_COLOR
+priceLabel.TextSize = 14
+priceLabel.TextXAlignment = Enum.TextXAlignment.Left
+priceLabel.BackgroundTransparency = 1
+priceLabel.Position = UDim2.new(0.05, 0, 0.5, 0)
+priceLabel.Size = UDim2.new(0.6, 0, 0, 18)
+
+local purchaseCountLabel = Instance.new("TextLabel", exampleProductFrame)
+purchaseCountLabel.Name = "PurchaseCountLabel"
+purchaseCountLabel.Font = Enum.Font.Gotham
+purchaseCountLabel.Text = "Total Purchases: 0"
+purchaseCountLabel.TextColor3 = TEXT_SECONDARY
+purchaseCountLabel.TextSize = 13
+purchaseCountLabel.TextXAlignment = Enum.TextXAlignment.Left
+purchaseCountLabel.BackgroundTransparency = 1
+purchaseCountLabel.Position = UDim2.new(0.05, 0, 0.7, 0)
+purchaseCountLabel.Size = UDim2.new(0.6, 0, 0, 18)
+
+local divider = Instance.new("Frame", exampleProductFrame)
+divider.Name = "Divider"
+divider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+divider.BorderSizePixel = 0
+divider.Position = UDim2.new(0, 0, 1, 0)
+divider.Size = UDim2.new(1, 0, 0, 1)
+
+local clickDetector = Instance.new("TextButton", exampleProductFrame)
+clickDetector.Name = "Click"
+clickDetector.Text = ""
+clickDetector.TextTransparency = 1
+clickDetector.BackgroundTransparency = 1
+clickDetector.Size = UDim2.new(1, 0, 1, 0)
+
+local autoBuyButton = Instance.new("TextButton", exampleProductFrame)
+autoBuyButton.Name = "AutoBuyButton"
+autoBuyButton.Font = Enum.Font.GothamBold
+autoBuyButton.Text = "Auto Buy"
+autoBuyButton.TextColor3 = TEXT_COLOR
+autoBuyButton.TextSize = 12
+autoBuyButton.BackgroundColor3 = BUTTON_BG
+autoBuyButton.BackgroundTransparency = 0.15
+autoBuyButton.Position = UDim2.new(0.67, 0, 0.05, 0)
+autoBuyButton.Size = UDim2.new(0, 80, 0, 22)
+Instance.new("UICorner", autoBuyButton).CornerRadius = UDim.new(0, 4)
+
+local copyButton = Instance.new("TextButton", exampleProductFrame)
+copyButton.Name = "CopyButton"
+copyButton.Font = Enum.Font.GothamBold
+copyButton.Text = "Copy ID"
+copyButton.TextColor3 = TEXT_COLOR
+copyButton.TextSize = 12
+copyButton.BackgroundColor3 = BUTTON_BG
+copyButton.BackgroundTransparency = 0.15
+copyButton.Position = UDim2.new(0.67, 0, 0.27, 0)
+copyButton.Size = UDim2.new(0, 80, 0, 22)
+Instance.new("UICorner", copyButton).CornerRadius = UDim.new(0, 4)
+
+local copyScriptButton = Instance.new("TextButton", exampleProductFrame)
+copyScriptButton.Name = "CopyScriptButton"
+copyScriptButton.Font = Enum.Font.GothamBold
+copyScriptButton.Text = "Copy Script"
+copyScriptButton.TextColor3 = TEXT_COLOR
+copyScriptButton.TextSize = 12
+copyScriptButton.BackgroundColor3 = BUTTON_BG
+copyScriptButton.BackgroundTransparency = 0.15
+copyScriptButton.Position = UDim2.new(0.67, 0, 0.49, 0)
+copyScriptButton.Size = UDim2.new(0, 80, 0, 22)
+Instance.new("UICorner", copyScriptButton).CornerRadius = UDim.new(0, 4)
+
+local buyButton = Instance.new("TextButton", exampleProductFrame)
+buyButton.Name = "BuyButton"
+buyButton.Font = Enum.Font.GothamBold
+buyButton.Text = "Buy Product"
+buyButton.TextColor3 = TEXT_COLOR
+buyButton.TextSize = 12
+buyButton.BackgroundColor3 = ACCENT
+buyButton.BackgroundTransparency = 0.2
+buyButton.Position = UDim2.new(0.67, 0, 0.71, 0)
+buyButton.Size = UDim2.new(0, 80, 0, 22)
+Instance.new("UICorner", buyButton).CornerRadius = UDim.new(0, 4)
+
+local function createHoverEffect(button, hoverColor)
+	local originalColor = button.BackgroundColor3
+	button.MouseEnter:Connect(function()
+		TweenService:Create(button, TweenInfo.new(0.15), { BackgroundColor3 = hoverColor }):Play()
+	end)
+	button.MouseLeave:Connect(function()
+		TweenService:Create(button, TweenInfo.new(0.15), { BackgroundColor3 = originalColor }):Play()
+	end)
+end
+
+local function stopAllAutoBuys()
+	for frame, isActive in pairs(autoBuyLoops) do
+		if isActive and frame and frame.Parent then
+			autoBuyLoops[frame] = false
+			local btn = frame:FindFirstChild("AutoBuyButton")
+			if btn then
+				btn.Text = "Auto Buy"
+				btn.BackgroundColor3 = BUTTON_BG
+			end
+		end
+	end
+	table.clear(autoBuyLoops)
+end
+
+local function updateScrollbarVisibility()
+	local visibleCount = 0
+	for _, child in ipairs(productsScrolling:GetChildren()) do
+		if child:IsA("Frame") and child.Visible and child.Name ~= "UIListLayout" then
+			visibleCount = visibleCount + 1
+		end
+	end
+	productsScrolling.ScrollingEnabled = (visibleCount > 3)
+	productsScrolling.ScrollBarThickness = (visibleCount > 3) and 5 or 0
+end
+
+local allProductFrames = {}
+local function loadProducts()
+	for _, frame in ipairs(allProductFrames) do
+		frame:Destroy()
+	end
+	table.clear(allProductFrames)
+	
+	local success, products = pcall(function()
+		return MarketplaceService:GetDeveloperProductsAsync()
+	end)
+	if not success then return end
+	
+	local allProductsInfo = products:GetCurrentPage()
+	
+	for _, productInfo in pairs(allProductsInfo) do
+		local productFrame = exampleProductFrame:Clone()
+		productFrame:SetAttribute("ProductName", productInfo.Name)
+		productFrame.Visible = true
+		productFrame.Parent = productsScrolling
+		table.insert(allProductFrames, productFrame)
+		purchaseCounts[productInfo.ProductId] = 0
+		productFramesMap[productInfo.ProductId] = productFrame
+		productFrame.NameLabel.Text = "Name: " .. productInfo.Name
+		productFrame.IDLabel.Text = "ID: " .. tostring(productInfo.ProductId)
+		productFrame.PriceLabel.Text = "Price: " .. tostring(productInfo.PriceInRobux) .. " R$"
+
+		local buttons = {
+			productFrame.AutoBuyButton,
+			productFrame.CopyButton,
+			productFrame.CopyScriptButton,
+			productFrame.BuyButton
+		}
+		productFrame.Click.MouseEnter:Connect(function()
+			if productInfo.Description and productInfo.Description:gsub("%s*", "") ~= "" then
+				tooltipLabel.Text = productInfo.Description
+				tooltipFrame.Visible = true
+			end
+		end)
+		productFrame.Click.MouseLeave:Connect(function()
+			tooltipFrame.Visible = false
+		end)
+		for _, btn in ipairs(buttons) do
+			btn.MouseEnter:Connect(function() tooltipFrame.Visible = false end)
+			btn.MouseLeave:Connect(function()
+				if productInfo.Description and productInfo.Description:gsub("%s*", "") ~= "" then
+					tooltipFrame.Visible = true
+				end
+			end)
+		end
+		
+		local hoverBg = productFrame.HoverBg
+		productFrame.Click.MouseEnter:Connect(function()
+			TweenService:Create(hoverBg, TweenInfo.new(0.2), { BackgroundTransparency = 0.6 }):Play()
+		end)
+		productFrame.Click.MouseLeave:Connect(function()
+			TweenService:Create(hoverBg, TweenInfo.new(0.2), { BackgroundTransparency = 1 }):Play()
+		end)
+
+		local autoBtn = productFrame.AutoBuyButton
+		local autoOriginalColor = BUTTON_BG
+		autoBtn.MouseEnter:Connect(function()
+			if autoBuyLoops[productFrame] then
+				TweenService:Create(autoBtn, TweenInfo.new(0.15), { BackgroundColor3 = ACCENT_HOVER }):Play()
+			else
+				TweenService:Create(autoBtn, TweenInfo.new(0.15), { BackgroundColor3 = BUTTON_HOVER }):Play()
+			end
+		end)
+		autoBtn.MouseLeave:Connect(function()
+			if autoBuyLoops[productFrame] then
+				TweenService:Create(autoBtn, TweenInfo.new(0.15), { BackgroundColor3 = ACCENT }):Play()
+			else
+				TweenService:Create(autoBtn, TweenInfo.new(0.15), { BackgroundColor3 = autoOriginalColor }):Play()
+			end
+		end)
+		autoBtn.MouseButton1Click:Connect(function()
+			autoBuyLoops[productFrame] = not autoBuyLoops[productFrame]
+			if autoBuyLoops[productFrame] then
+				autoBtn.Text = "Stop Auto Buy"
+				autoBtn.BackgroundColor3 = ACCENT
+				task.spawn(function()
+					while autoBuyLoops[productFrame] do
+						Finished(productInfo)
+						task.wait(0.1)
+					end
+				end)
+			else
+				autoBtn.Text = "Auto Buy"
+				autoBtn.BackgroundColor3 = autoOriginalColor
+			end
+		end)
+
+		local copyBtn = productFrame.CopyButton
+		createHoverEffect(copyBtn, BUTTON_HOVER)
+		copyBtn.MouseButton1Click:Connect(function()
+			if setclipboard then
+				setclipboard(tostring(productInfo.ProductId))
+				local origText = copyBtn.Text
+				local origColor = copyBtn.BackgroundColor3
+				copyBtn.Text = "Copied!"
+				copyBtn.BackgroundColor3 = SUCCESS_COLOR
+				task.wait(1)
+				copyBtn.Text = origText
+				copyBtn.BackgroundColor3 = origColor
+			end
+		end)
+
+		local copyScriptBtn = productFrame.CopyScriptButton
+		createHoverEffect(copyScriptBtn, BUTTON_HOVER)
+		copyScriptBtn.MouseButton1Click:Connect(function()
+			if setclipboard then
+				local scriptStr = string.format([[
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local TargetPlayer = Players.LocalPlayer
+local ProductID = %d
+
+local function purchaseProduct()
+	local success, result = pcall(function()
+		MarketplaceService:SignalPromptProductPurchaseFinished(TargetPlayer, ProductID, true)
+	end)
+	if not success then
+		pcall(function()
+			MarketplaceService:PromptProductPurchaseFinished(TargetPlayer, ProductID)
+		end)
+	end
+end
+
+purchaseProduct()
+]], productInfo.ProductId)
+				setclipboard(scriptStr)
+				local origText = copyScriptBtn.Text
+				local origColor = copyScriptBtn.BackgroundColor3
+				copyScriptBtn.Text = "Copied!"
+				copyScriptBtn.BackgroundColor3 = SUCCESS_COLOR
+				task.wait(1)
+				copyScriptBtn.Text = origText
+				copyScriptBtn.BackgroundColor3 = origColor
+			end
+		end)
+
+		local buyBtn = productFrame.BuyButton
+		createHoverEffect(buyBtn, ACCENT_HOVER)
+		buyBtn.MouseButton1Click:Connect(function()
+			if activeButtonResets[buyBtn] then task.cancel(activeButtonResets[buyBtn]) end
+			if not buyBtn:GetAttribute("OriginalText") then
+				buyBtn:SetAttribute("OriginalText", buyBtn.Text)
+				buyBtn:SetAttribute("OriginalColor", buyBtn.BackgroundColor3)
+			end
+			local origText = buyBtn:GetAttribute("OriginalText")
+			local origColor = buyBtn:GetAttribute("OriginalColor")
+			buyBtn.Text = "Processing..."
+			buyBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
+			Finished(productInfo)
+			activeButtonResets[buyBtn] = task.spawn(function()
+				task.wait(0.5)
+				buyBtn.Text = "Done!"
+				buyBtn.BackgroundColor3 = SUCCESS_COLOR
+				task.wait(1.5)
+				buyBtn.Text = origText
+				buyBtn.BackgroundColor3 = origColor
+				activeButtonResets[buyBtn] = nil
+			end)
+		end)
+	end
+	updateScrollbarVisibility()
+end
+
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+	local searchText = searchBox.Text:lower()
+	for _, frame in ipairs(allProductFrames) do
+		local productName = frame:GetAttribute("ProductName"):lower()
+		frame.Visible = searchText == "" or string.find(productName, searchText, 1, true) ~= nil
+	end
+	updateScrollbarVisibility()
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if tooltipFrame.Visible and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local mousePos = UserInputService:GetMouseLocation()
+		tooltipFrame.Position = UDim2.fromOffset(mousePos.X + 15, mousePos.Y + 15)
+	end
+end)
+
+refreshButton.MouseButton1Click:Connect(function()
+	loadProducts()
+	refreshButton.Text = "âœ“"
+	task.wait(0.5)
+	refreshButton.Text = "R"
+end)
+
+createHoverEffect(refreshButton, Color3.fromRGB(100, 160, 230))
+createHoverEffect(minimizeButton, Color3.fromRGB(100, 100, 100))
+
+closeButton.MouseButton1Click:Connect(function()
+	stopAllAutoBuys()
+	mainGui:Destroy()
+end)
+
+local isMinimized = false
+minimizeButton.MouseButton1Click:Connect(function()
+	isMinimized = not isMinimized
+	if isMinimized then
+		minimizeButton.Text = "+"
+		minimizeButton.BackgroundColor3 = SUCCESS_COLOR
+		searchBox.Visible = false
+		contentContainer.Visible = false
+		TweenService:Create(mainFrame, TweenInfo.new(0.3), { Size = UDim2.new(0, 300, 0, 36) }):Play()
+	else
+		minimizeButton.Text = "âˆ’"
+		minimizeButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+		searchBox.Visible = true
+		contentContainer.Visible = true
+		TweenService:Create(mainFrame, TweenInfo.new(0.3), { Size = UDim2.new(0, 300, 0, 36) }):Play()
+	end
+end)
+
+local isDragging, dragStart, startPosition, moveConn, upConn
+mainFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		isDragging = true
+		dragStart = input.Position
+		startPosition = mainFrame.Position
+		moveConn = UserInputService.InputChanged:Connect(function(moveInput)
+			if (moveInput.UserInputType == Enum.UserInputType.MouseMovement or moveInput.UserInputType == Enum.UserInputType.Touch) and isDragging then
+				local delta = moveInput.Position - dragStart
+				mainFrame.Position = UDim2.new(
+					startPosition.X.Scale,
+					startPosition.X.Offset + delta.X,
+					startPosition.Y.Scale,
+					startPosition.Y.Offset + delta.Y
+				)
+			end
+		end)
+		upConn = UserInputService.InputEnded:Connect(function(endInput)
+			if (endInput.UserInputType == Enum.UserInputType.MouseButton1 or endInput.UserInputType == Enum.UserInputType.Touch) and isDragging then
+				isDragging = false
+				if moveConn then moveConn:Disconnect() end
+				if upConn then upConn:Disconnect() end
+			end
+		end)
+	end
+end)
+
+loadProducts()
