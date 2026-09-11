@@ -36,7 +36,7 @@ function convertStringToTable(inputString)
     local result = {}
     for value in string.gmatch(inputString, "([^,]+)") do
         local trimmedValue = value:match("^%s*(.-)%s*$")
-        tablein(result, trimmedValue)
+        table.insert(result, trimmedValue)
     end
 
     return result
@@ -344,7 +344,8 @@ local Library = {
 
     _dragging = false,
     _drag_start = nil,
-    _container_position = nil
+    _container_position = nil,
+    _flag_registry = {}
 }
 Library.__index = Library
 
@@ -361,6 +362,7 @@ function Library.new(config: table)
     }
     
     self:create_ui(currentconfig)
+    self:load()
 
     return self
 end
@@ -2924,92 +2926,61 @@ task.defer(function()
 end)
 
 
-local _AllusiveOriginalCreateTab = Library.create_tab
-Library.create_tab = function(self, title, icon, icon_size, idle_color, active_color)
-    local tab = _AllusiveOriginalCreateTab(self, title, icon, icon_size, idle_color, active_color)
-    if not tab then return tab end
+local _OriginalNew = Library.new
+Library.new = function(config)
+    local self = _OriginalNew(config)
 
-    if not tab.CreateModule then
-        tab.CreateModule = tab.create_module
+    local function WrapTab(tab)
+        if not tab then return tab end
+
+        local original_create_module = tab.create_module
+        if original_create_module and not tab.CreateModule then
+            tab.CreateModule = function(module_self, settings)
+                settings = settings or {}
+                settings.title = settings.title or settings.name or "Module"
+                settings.section = settings.section or "left"
+                settings.flag = settings.flag or settings.title
+                settings.callback = settings.callback or function() end
+
+                local module = original_create_module(module_self, settings)
+                if not module then return module end
+
+                module.CreateToggle = module.CreateToggle or module.create_checkbox
+                module.CreateCheckbox = module.CreateCheckbox or module.create_checkbox
+                module.CreateSlider = module.CreateSlider or module.create_slider
+                module.CreateDropdown = module.CreateDropdown or module.create_dropdown
+                module.CreateTextbox = module.CreateTextbox or module.create_textbox
+                module.CreateText = module.CreateText or module.create_text
+                module.CreateParagraph = module.CreateParagraph or module.create_paragraph
+                module.CreateDivider = module.CreateDivider or module.create_divider
+                module.CreateButton = module.CreateButton or module.create_feature
+
+                module.AddToggle = module.AddToggle or module.create_checkbox
+                module.AddCheckbox = module.AddCheckbox or module.create_checkbox
+                module.AddSlider = module.AddSlider or module.create_slider
+                module.AddDropdown = module.AddDropdown or module.create_dropdown
+                module.AddTextbox = module.AddTextbox or module.create_textbox
+                module.AddText = module.AddText or module.create_text
+                module.AddParagraph = module.AddParagraph or module.create_paragraph
+                module.AddDivider = module.AddDivider or module.create_divider
+                module.AddButton = module.AddButton or module.create_feature
+
+                return module
+            end
+        end
+
+        tab.AddModule = tab.AddModule or tab.CreateModule
+        return tab
     end
 
-    if not tab.CreateModule then return tab end
-
-    local _OriginalCreateModule = tab.create_module
-    tab.create_module = function(module_self, settings)
-        settings = settings or {}
-        settings.title = settings.title or settings.name or "Module"
-        settings.section = settings.section or "left"
-        settings.flag = settings.flag or settings.title
-        settings.callback = settings.callback or function() end
-        local module = _OriginalCreateModule(module_self, settings)
-        if not module then return module end
-
-        if not module.CreateToggle then
-            module.CreateToggle = module.create_checkbox
-        end
-        if not module.CreateCheckbox then
-            module.CreateCheckbox = module.create_checkbox
-        end
-        if not module.CreateSlider then
-            module.CreateSlider = module.create_slider
-        end
-        if not module.CreateDropdown then
-            module.CreateDropdown = module.create_dropdown
-        end
-        if not module.CreateTextbox then
-            module.CreateTextbox = module.create_textbox
-        end
-        if not module.CreateText then
-            module.CreateText = module.create_text
-        end
-        if not module.CreateParagraph then
-            module.CreateParagraph = module.create_paragraph
-        end
-        if not module.CreateDivider then
-            module.CreateDivider = module.create_divider
-        end
-        if not module.CreateButton then
-            module.CreateButton = module.create_feature
-        end
-        if not module.AddToggle then
-            module.AddToggle = module.create_checkbox
-        end
-        if not module.AddCheckbox then
-            module.AddCheckbox = module.create_checkbox
-        end
-        if not module.AddSlider then
-            module.AddSlider = module.create_slider
-        end
-        if not module.AddDropdown then
-            module.AddDropdown = module.create_dropdown
-        end
-        if not module.AddTextbox then
-            module.AddTextbox = module.create_textbox
-        end
-        if not module.AddText then
-            module.AddText = module.create_text
-        end
-        if not module.AddParagraph then
-            module.AddParagraph = module.create_paragraph
-        end
-        if not module.AddDivider then
-            module.AddDivider = module.create_divider
-        end
-        if not module.AddButton then
-            module.AddButton = module.create_feature
-        end
-
-        return module
+    local original_create_tab = self.create_tab
+    self.CreateTab = function(tab_self, title, icon, icon_size, idle_color, active_color)
+        return WrapTab(original_create_tab(tab_self, title, icon, icon_size, idle_color, active_color))
     end
-
-    tab.CreateTab = tab.create_module
-    tab.AddModule = tab.create_module
-    return tab
+    self.AddTab = self.CreateTab
+    return self
 end
 
-Library.CreateTab = Library.create_tab
-Library.AddTab = Library.create_tab
 Library.CreateWindow = Library.new
 Library.newWindow = Library.new
 Library.SendNotification = Library.SendNotification
